@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panal de Letras</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+  /* ── Design tokens ── */
+  :root {
+    --honey:      #F5A623;
+    --honey-dark: #D4831A;
+    --honey-pale: #FEF3DC;
+    --ink:        #1A1A2E;
+    --ink-light:  #4A4A6A;
+    --white:      #FFFFFF;
+    --cell-bg:    #FDF6E3;
+    --found:      #2ECC71;
+    --error:      #E74C3C;
+    --shadow:     rgba(26,26,46,0.12);
+    --radius:     14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--cell-bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Header ── */
+  header {
+    width: 100%;
+    background: var(--ink);
+    color: var(--white);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo span { color: var(--honey); }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  /* ── Screens ── */
+  .screen { display: none; width: 100%; max-width: 560px; padding: 24px 16px; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 100%;
+    box-shadow: 0 2px 12px var(--shadow);
+  }
+
+  .card h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--ink);
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px 22px;
+    border: none;
+    border-radius: 50px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--honey);
+    color: var(--ink);
+    box-shadow: 0 2px 8px rgba(245,166,35,0.35);
+  }
+  .btn-primary:hover { background: var(--honey-dark); color: var(--white); }
+
+  .btn-secondary {
+    background: var(--ink);
+    color: var(--white);
+  }
+  .btn-secondary:hover { background: #2d2d4e; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-light);
+    border: 2px solid #ddd;
+  }
+  .btn-ghost:hover { border-color: var(--honey); color: var(--honey-dark); }
+
+  .btn-sm { padding: 7px 16px; font-size: 0.82rem; }
+
+  /* ── Input ── */
+  input[type="text"] {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus { border-color: var(--honey); }
+
+  /* ── Setup Screen ── */
+  .setup-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .choice-btn {
+    width: 100%;
+    padding: 18px;
+    border-radius: var(--radius);
+    border: 2px solid #eee;
+    background: var(--white);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .choice-btn:hover { border-color: var(--honey); background: var(--honey-pale); }
+  .choice-btn .choice-title { font-weight: 700; font-size: 1rem; color: var(--ink); }
+  .choice-btn .choice-desc { font-size: 0.83rem; color: var(--ink-light); margin-top: 3px; }
+
+  /* ── Honeycomb ── */
+  .hive-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: 10px 0 4px;
+    user-select: none;
+  }
+
+  .hive-row {
+    display: flex;
+    gap: 0;
+  }
+
+  .hex-btn {
+    width: 72px;
+    height: 72px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.08s;
+  }
+  .hex-btn:active { transform: scale(0.92); }
+
+  .hex-btn svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+  .hex-btn .hex-letter {
+    position: relative;
+    z-index: 1;
+    font-size: 1.55rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+  }
+
+  .hex-btn.center .hex-letter { color: var(--white); }
+
+  /* ── Input area ── */
+  .input-area {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .word-display {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: 4px;
+    min-height: 2.2rem;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-align: center;
+    min-width: 200px;
+  }
+
+  .word-display.shake {
+    animation: shake 0.35s ease;
+    color: var(--error);
+  }
+
+  .word-display.bounce {
+    animation: bounce-in 0.3s ease;
+    color: var(--found);
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-5px); }
+    80%      { transform: translateX(5px); }
+  }
+
+  @keyframes bounce-in {
+    0%   { transform: scale(0.85); }
+    60%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  .word-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.4rem;
+    background: var(--honey-dark);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: var(--ink);
+    color: var(--white);
+    padding: 10px 22px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 9999;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { background: var(--found); }
+  #toast.error   { background: var(--error); }
+
+  /* ── Found words ── */
+  .found-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 32px;
+  }
+
+  .found-word {
+    background: var(--honey-pale);
+    border: 1.5px solid var(--honey);
+    color: var(--ink);
+    border-radius: 50px;
+    padding: 4px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    animation: pop-in 0.2s ease;
+  }
+
+  @keyframes pop-in {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  /* ── Score / Progress ── */
+  .score-display {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .score-number {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--honey-dark);
+    line-height: 1;
+  }
+
+  .score-label {
+    font-size: 0.8rem;
+    color: var(--ink-light);
+    font-weight: 600;
+  }
+
+  .rank-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--ink-light);
+    margin-top: 4px;
+  }
+
+  /* ── Leaderboard ── */
+  .leaderboard-list { width: 100%; }
+
+  .lb-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 4px;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 12px;
+    transition: background 0.2s;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row.me { background: var(--honey-pale); border-radius: 8px; }
+
+  .lb-rank {
+    width: 26px;
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--ink-light);
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .lb-rank.top { color: var(--honey-dark); font-size: 1rem; }
+
+  .lb-name {
+    flex: 1;
+    font-weight: 700;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lb-score {
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--honey-dark);
+    flex-shrink: 0;
+  }
+
+  .lb-words {
+    font-size: 0.75rem;
+    color: var(--ink-light);
+    flex-shrink: 0;
+    min-width: 60px;
+    text-align: right;
+  }
+
+  .lb-empty {
+    text-align: center;
+    color: var(--ink-light);
+    font-size: 0.9rem;
+    padding: 20px;
+  }
+
+  /* ── Share box ── */
+  .share-box {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .share-box input {
+    flex: 1;
+    font-size: 0.8rem;
+    padding: 10px 14px;
+  }
+
+  /* ── Letters badge ── */
+  .letters-badge {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 4px 0;
+  }
+
+  .letter-chip {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--honey-pale);
+    border: 2px solid var(--honey);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .letter-chip.center-chip {
+    background: var(--honey);
+    color: var(--white);
+    border-color: var(--honey-dark);
+  }
+
+  /* ── Loading ── */
+  .loading-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--honey);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse { 0%,80%,100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+  /* ── Mobile ── */
+  @media (max-width: 420px) {
+    .hex-btn { width: 62px; height: 62px; }
+    .hex-btn .hex-letter { font-size: 1.3rem; }
+    .word-display { font-size: 1.3rem; }
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    width: 100%;
+    background: #f3f3f3;
+    border-radius: 10px;
+    padding: 3px;
+  }
+  .tab {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--ink-light);
+    transition: background 0.2s, color 0.2s;
+  }
+  .tab.active {
+    background: var(--white);
+    color: var(--ink);
+    box-shadow: 0 1px 4px var(--shadow);
+  }
+
+  .tab-panel { display: none; width: 100%; }
+  .tab-panel.active { display: block; }
+
+  .setup-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ink-light);
+    margin-bottom: 6px;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.88rem;
+    color: var(--ink-light);
+    padding: 4px 0;
+  }
+  .info-row strong { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<header>
+  <div class="logo">🍯 <span>Panal</span> de Letras</div>
+  <div class="header-actions" id="headerActions"></div>
+</header>
+
+<!-- ══════════════════════════════════ SCREEN: HOME ══════════════════════════════════ -->
+<div id="screenHome" class="screen active">
+  <div style="text-align:center; padding: 10px 0 0;">
+    <div style="font-size:4rem; line-height:1;">🍯</div>
+    <h1 style="font-size:1.8rem;font-weight:900;margin-top:8px;">Panal de Letras</h1>
+    <p style="color:var(--ink-light);margin-top:6px;font-size:0.95rem;">
+      Forma palabras usando las letras del panal.<br>¡La letra central siempre debe estar!
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="setup-choice">
+      <button class="choice-btn" onclick="showCreatePuzzle()">
+        <div class="choice-title">🎲 Crear partida</div>
+        <div class="choice-desc">Genera un nuevo panal y comparte el enlace con tus amigos</div>
+      </button>
+      <button class="choice-btn" onclick="showJoinPuzzle()">
+        <div class="choice-title">🔗 Unirse con código</div>
+        <div class="choice-desc">Escribe el código que te compartieron</div>
+      </button>
+    </div>
+  </div>
+
+  <div id="loadingWords" style="display:none; text-align:center; color:var(--ink-light); font-size:0.9rem;">
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:8px;">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+    Cargando diccionario…
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ SCREEN: CREATE ══════════════════════════════════ -->
+<div id="screenCreate" class="screen">
+  <div style="width:100%;display:flex;align-items:center;gap:10px;">
+    <button class="btn btn-ghost btn-sm" onclick="goHome()">← Atrás</button>
+    <h2 style="font-weight:800;font-size:1.1rem;">Crear partida</h2>
+  </div>
+
+  <div class="card" id="puzzlePreview">
+    <div class="setup-label">Letras del panal</div>
+    <div class="letters-badge" id="previewLetters"></div>
+    <div class="info-row" style="margin-top:12px;">
+      <span>Palabras válidas</span>
+      <strong id="previewCount">–</strong>
+    </div>
+    <div class="info-row">
+      <span>Pangrama</span>
+      <strong id="previewPangram">–</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="setup-label">Tu nombre</div>
+    <input type="text" id="createName" placeholder="Escribe tu nombre" maxlength="20">
+  </div>
+
+  <div style="display:flex;gap:10px;width:100%;flex-wrap:wrap;">
+    <button class="btn btn-ghost" onclick="regeneratePuzzle()" style="flex:1;">🎲 Otro panal</button>
+    <button class="btn btn-primary" onclick="startAsHost()" style="flex:2;">Crear y jugar →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ SCREEN: JOIN ══════════════════════════════════ -->
+<div id="screenJoin" class="screen">
+  <div style="width:100%;display:flex;align-items:center;gap:10px;">
+    <button class="btn btn-ghost btn-sm" onclick="goHome()">← Atrás</button>
+    <h2 style="font-weight:800;font-size:1.1rem;">Unirse a partida</h2>
+  </div>
+
+  <div class="card">
+    <div class="setup-label">Código de partida</div>
+    <input type="text" id="joinCode" placeholder="Ej: ABCDE123" maxlength="30" oninput="this.value=this.value.toUpperCase()">
+  </div>
+
+  <div class="card">
+    <div class="setup-label">Tu nombre</div>
+    <input type="text" id="joinName" placeholder="Escribe tu nombre" maxlength="20">
+  </div>
+
+  <button class="btn btn-primary" style="width:100%;" onclick="joinGame()">Unirme →</button>
+</div>
+
+<!-- ══════════════════════════════════ SCREEN: GAME ══════════════════════════════════ -->
+<div id="screenGame" class="screen">
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('game')" id="tabGame">🍯 Juego</button>
+    <button class="tab" onclick="switchTab('board')" id="tabBoard">🏆 Tabla</button>
+  </div>
+
+  <!-- GAME TAB -->
+  <div class="tab-panel active" id="panelGame">
+
+    <!-- Score row -->
+    <div class="card" style="padding:16px 20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div class="score-display">
+            <div class="score-number" id="myScore">0</div>
+            <div class="score-label">puntos</div>
+          </div>
+          <div class="rank-label" id="myRank">Principiante</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.82rem;color:var(--ink-light);">palabras</div>
+          <div style="font-size:1.4rem;font-weight:900;color:var(--ink);" id="myWordCount">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hive -->
+    <div class="hive-wrapper" id="hive"></div>
+
+    <!-- Word input display -->
+    <div class="input-area">
+      <div class="word-display" id="wordDisplay">
+        <span id="wordText"></span><span class="word-cursor"></span>
+      </div>
+      <div class="controls">
+        <button class="btn btn-ghost btn-sm" onclick="deleteLetter()">⌫ Borrar</button>
+        <button class="btn btn-ghost btn-sm" onclick="shuffleOuter()">🔀 Mezclar</button>
+        <button class="btn btn-primary btn-sm" onclick="submitWord()">Enviar ↵</button>
+      </div>
+    </div>
+
+    <!-- Found words -->
+    <div class="card" style="padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="setup-label" style="margin:0;">Mis palabras</div>
+        <div style="font-size:0.8rem;color:var(--ink-light);" id="foundCountLabel">0 palabras</div>
+      </div>
+      <div class="found-list" id="foundList">
+        <span style="color:var(--ink-light);font-size:0.85rem;">Aún no has encontrado ninguna palabra…</span>
+      </div>
+    </div>
+
+    <!-- Share row -->
+    <div class="card" style="padding:16px;">
+      <div class="setup-label">Invita a tus amigos</div>
+      <div class="share-box">
+        <input type="text" id="shareUrl" readonly>
+        <button class="btn btn-primary btn-sm" onclick="copyLink()">Copiar</button>
+      </div>
+    </div>
+
+  </div><!-- /panelGame -->
+
+  <!-- LEADERBOARD TAB -->
+  <div class="tab-panel" id="panelBoard">
+    <div class="card" style="padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="setup-label" style="margin:0;">Clasificación en vivo</div>
+        <div style="display:flex;gap:4px;">
+          <div class="loading-dot" id="lbDot1"></div>
+          <div class="loading-dot" id="lbDot2"></div>
+          <div class="loading-dot" id="lbDot3"></div>
+        </div>
+      </div>
+      <div class="leaderboard-list" id="leaderboard">
+        <div class="lb-empty">Esperando jugadores…</div>
+      </div>
+    </div>
+  </div><!-- /panelBoard -->
+
+</div><!-- /screenGame -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   FIREBASE CONFIG
+═══════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAHN9V1RUDVHskcDIu2YT9ZQFQvBIgE_UQ",
+  authDomain: "spelling-bee-74a32.firebaseapp.com",
+  projectId: "spelling-bee-74a32",
+  storageBucket: "spelling-bee-74a32.firebasestorage.app",
+  messagingSenderId: "777716383565",
+  appId: "1:777716383565:web:7fecc869199c318ad74104",
+  databaseURL: "https://spelling-bee-74a32-default-rtdb.firebaseio.com"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════ */
+let allWords      = [];  // full dictionary
+let puzzleLetters = [];  // 7 letters
+let centerLetter  = '';
+let outerLetters  = [];  // 6 outer letters (shuffleable)
+let validAnswers  = new Set();
+let currentWord   = '';
+let foundWords    = new Set();
+let myScore       = 0;
+let myName        = '';
+let sessionId     = '';
+let isHost        = false;
+let dbRef         = null;
+let wordsLoaded   = false;
+
+/* ═══════════════════════════════════════════════════════════════
+   WORD LIST LOADING
+═══════════════════════════════════════════════════════════════ */
+async function loadWords() {
+  document.getElementById('loadingWords').style.display = 'block';
+  try {
+    const r = await fetch('words.json');
+    allWords = await r.json();
+    wordsLoaded = true;
+  } catch(e) {
+    showToast('Error cargando diccionario', 'error');
+  }
+  document.getElementById('loadingWords').style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PUZZLE GENERATION
+═══════════════════════════════════════════════════════════════ */
+function generatePuzzle() {
+  if (!wordsLoaded) return;
+
+  // Pick a random word with exactly 7 unique letters as the pangram seed
+  const pangrams = allWords.filter(w => new Set(w).size === 7);
+  let attempts = 0;
+  while (attempts < 200) {
+    attempts++;
+    const seed = pangrams[Math.floor(Math.random() * pangrams.length)];
+    const letters = [...new Set(seed)].sort();
+    const letterSet = new Set(letters);
+
+    // Try each letter as center
+    for (const center of letters) {
+      const answers = allWords.filter(w => {
+        const s = new Set(w);
+        return s.has(center) && [...s].every(c => letterSet.has(c));
+      });
+      if (answers.length >= 20 && answers.length <= 800) {
+        return { letters, center, answers };
+      }
+    }
+  }
+  return null;
+}
+
+function applyPuzzle(data) {
+  puzzleLetters = data.letters;
+  centerLetter  = data.center;
+  outerLetters  = data.letters.filter(l => l !== data.center);
+  validAnswers  = new Set(data.answers);
+}
+
+function regeneratePuzzle() {
+  if (!wordsLoaded) { showToast('Cargando diccionario…', ''); return; }
+  const p = generatePuzzle();
+  if (!p) { showToast('No se pudo generar un panal', 'error'); return; }
+  applyPuzzle(p);
+  renderPreview();
+}
+
+function renderPreview() {
+  const container = document.getElementById('previewLetters');
+  container.innerHTML = '';
+  for (const l of puzzleLetters) {
+    const chip = document.createElement('div');
+    chip.className = 'letter-chip' + (l === centerLetter ? ' center-chip' : '');
+    chip.textContent = l.toUpperCase();
+    container.appendChild(chip);
+  }
+  document.getElementById('previewCount').textContent = validAnswers.size;
+  // Find a pangram to show
+  const pangram = [...validAnswers].find(w => new Set(w).size === 7);
+  document.getElementById('previewPangram').textContent = pangram
+    ? pangram.toUpperCase()
+    : '(ninguno encontrado)';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goHome() { showScreen('screenHome'); }
+
+function showCreatePuzzle() {
+  showScreen('screenCreate');
+  if (!wordsLoaded) {
+    loadWords().then(() => regeneratePuzzle());
+  } else {
+    regeneratePuzzle();
+  }
+}
+
+function showJoinPuzzle() {
+  // Check URL for code
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('game');
+  if (code) document.getElementById('joinCode').value = code.toUpperCase();
+  showScreen('screenJoin');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HOST FLOW
+═══════════════════════════════════════════════════════════════ */
+async function startAsHost() {
+  const name = document.getElementById('createName').value.trim();
+  if (!name) { showToast('Escribe tu nombre', 'error'); return; }
+  if (!puzzleLetters.length) { showToast('Genera un panal primero', 'error'); return; }
+
+  myName  = name;
+  isHost  = true;
+  // Encode puzzle in session ID: letters + center (compact)
+  // Format: 7letters_center  e.g. "abcdefg_c"
+  const code = puzzleLetters.join('') + '_' + centerLetter;
+  sessionId   = code;
+
+  await initFirebase();
+  startGame();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   JOIN FLOW
+═══════════════════════════════════════════════════════════════ */
+async function joinGame() {
+  const rawCode = document.getElementById('joinCode').value.trim().toLowerCase();
+  const name    = document.getElementById('joinName').value.trim();
+  if (!rawCode) { showToast('Escribe el código', 'error'); return; }
+  if (!name)    { showToast('Escribe tu nombre', 'error'); return; }
+
+  // Parse code: 7letters_center
+  const parts = rawCode.split('_');
+  if (parts.length !== 2 || parts[0].length !== 7 || parts[1].length !== 1) {
+    showToast('Código inválido', 'error');
+    return;
+  }
+
+  const letters = [...new Set(parts[0])].sort();
+  const center  = parts[1];
+  if (!letters.includes(center)) { showToast('Código inválido', 'error'); return; }
+
+  if (!wordsLoaded) {
+    showToast('Cargando diccionario…', '');
+    await loadWords();
+  }
+
+  // Compute valid answers from the word list
+  const letterSet = new Set(letters);
+  const answers = allWords.filter(w => {
+    const s = new Set(w);
+    return s.has(center) && [...s].every(c => letterSet.has(c));
+  });
+
+  applyPuzzle({ letters, center, answers });
+  myName    = name;
+  sessionId = rawCode;
+  isHost    = false;
+
+  await initFirebase();
+  startGame();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FIREBASE SYNC
+═══════════════════════════════════════════════════════════════ */
+let myPlayerId = null;
+
+async function initFirebase() {
+  myPlayerId = 'player_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  dbRef = db.ref('games/' + sessionId + '/players/' + myPlayerId);
+  await dbRef.set({ name: myName, score: 0, words: 0 });
+
+  // Remove on disconnect
+  dbRef.onDisconnect().remove();
+
+  // Listen to all players for leaderboard
+  db.ref('games/' + sessionId + '/players').on('value', snap => {
+    const data = snap.val() || {};
+    renderLeaderboard(data);
+  });
+}
+
+function pushScore() {
+  if (!dbRef) return;
+  dbRef.update({ score: myScore, words: foundWords.size });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GAME
+═══════════════════════════════════════════════════════════════ */
+function startGame() {
+  currentWord = '';
+  foundWords  = new Set();
+  myScore     = 0;
+
+  // Build share URL
+  const url = window.location.origin + window.location.pathname + '?game=' + encodeURIComponent(sessionId.toUpperCase());
+  document.getElementById('shareUrl').value = url;
+
+  showScreen('screenGame');
+  renderHive();
+  updateScoreDisplay();
+  renderFoundWords();
+  switchTab('game');
+
+  // Keyboard support
+  document.addEventListener('keydown', handleKey);
+}
+
+/* ── Hive rendering ── */
+// Layout: row of 3, row of 4, row of 3 but with center in middle of row of 3 center
+// Classic NYT layout: top-row 2, middle-row 3, bottom-row 2 for 7 hexes
+// Actually: row1=[outer0,outer1], row2=[outer2,center,outer3], row3=[outer4,outer5]
+function renderHive() {
+  const hive = document.getElementById('hive');
+  hive.innerHTML = '';
+
+  const layout = [
+    [outerLetters[0], outerLetters[1]],
+    [outerLetters[2], centerLetter,    outerLetters[3]],
+    [outerLetters[4], outerLetters[5]],
+  ];
+
+  const OFFSET = 36; // px half-shift for hex rows
+
+  layout.forEach((row, ri) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'hive-row';
+    rowEl.style.marginTop = ri === 0 ? '0' : '-18px';
+
+    if (row.length === 2) rowEl.style.marginLeft = OFFSET + 'px';
+
+    row.forEach(letter => {
+      const btn = document.createElement('button');
+      btn.className = 'hex-btn' + (letter === centerLetter ? ' center' : '');
+      btn.dataset.letter = letter;
+      btn.onclick = () => typeLetter(letter);
+
+      // SVG hexagon
+      const fill = letter === centerLetter ? '#F5A623' : '#FDF6E3';
+      const stroke = letter === centerLetter ? '#D4831A' : '#D4C89A';
+      btn.innerHTML = `
+        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="40,6 74,22 74,58 40,74 6,58 6,22"
+            fill="${fill}" stroke="${stroke}" stroke-width="2.5"/>
+        </svg>
+        <span class="hex-letter">${letter.toUpperCase()}</span>`;
+
+      rowEl.appendChild(btn);
+    });
+
+    hive.appendChild(rowEl);
+  });
+}
+
+/* ── Input ── */
+function typeLetter(l) {
+  currentWord += l;
+  updateWordDisplay();
+}
+
+function deleteLetter() {
+  currentWord = currentWord.slice(0, -1);
+  updateWordDisplay();
+}
+
+function updateWordDisplay() {
+  document.getElementById('wordText').textContent = currentWord.toUpperCase();
+}
+
+function shuffleOuter() {
+  for (let i = outerLetters.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [outerLetters[i], outerLetters[j]] = [outerLetters[j], outerLetters[i]];
+  }
+  renderHive();
+}
+
+function handleKey(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'Enter')     { submitWord(); return; }
+  if (e.key === 'Backspace') { deleteLetter(); return; }
+  if (/^[a-zA-Z]$/.test(e.key)) {
+    const l = e.key.toLowerCase();
+    if (puzzleLetters.includes(l)) typeLetter(l);
+  }
+}
+
+/* ── Submission ── */
+function submitWord() {
+  const word = currentWord.toLowerCase();
+  currentWord = '';
+  updateWordDisplay();
+
+  if (word.length < 4) {
+    flashWord('¡Muy corta!', 'shake'); return;
+  }
+  if (!word.includes(centerLetter)) {
+    flashWord('Falta la letra central', 'shake'); return;
+  }
+  if (foundWords.has(word)) {
+    flashWord('¡Ya la encontraste!', 'shake'); return;
+  }
+  if (!validAnswers.has(word)) {
+    flashWord('No está en la lista', 'shake'); return;
+  }
+
+  // Valid word!
+  foundWords.add(word);
+  const pts = calcPoints(word);
+  myScore += pts;
+
+  const isPangram = new Set(word).size === 7;
+  const msg = isPangram
+    ? `🌟 ¡PANGRAMA! +${pts}`
+    : pts === 1 ? '¡Bien! +1' : `¡Genial! +${pts}`;
+
+  flashWord(word.toUpperCase(), 'bounce');
+  showToast(msg, isPangram ? '' : 'success');
+  updateScoreDisplay();
+  renderFoundWords();
+  pushScore();
+}
+
+function calcPoints(word) {
+  if (word.length === 4) return 1;
+  const base = word.length;
+  const isPangram = new Set(word).size === 7;
+  return isPangram ? base + 7 : base;
+}
+
+function flashWord(text, cls) {
+  const el = document.getElementById('wordDisplay');
+  const wt = document.getElementById('wordText');
+  wt.textContent = text;
+  el.classList.add(cls);
+  setTimeout(() => {
+    el.classList.remove(cls);
+    wt.textContent = currentWord.toUpperCase();
+  }, 500);
+}
+
+/* ── Score display ── */
+const RANKS = [
+  [0,   'Principiante'],
+  [5,   'Aprendiz'],
+  [15,  'Bueno'],
+  [30,  'Hábil'],
+  [60,  'Brillante'],
+  [100, '¡Experto!'],
+  [150, '🌟 Maestro'],
+];
+
+function updateScoreDisplay() {
+  document.getElementById('myScore').textContent = myScore;
+  document.getElementById('myWordCount').textContent = foundWords.size;
+
+  let rank = RANKS[0][1];
+  for (const [threshold, label] of RANKS) {
+    if (myScore >= threshold) rank = label;
+  }
+  document.getElementById('myRank').textContent = rank;
+
+  const label = foundWords.size === 1 ? '1 palabra' : `${foundWords.size} palabras`;
+  document.getElementById('foundCountLabel').textContent = label;
+}
+
+/* ── Found words list ── */
+function renderFoundWords() {
+  const list = document.getElementById('foundList');
+  if (foundWords.size === 0) {
+    list.innerHTML = '<span style="color:var(--ink-light);font-size:0.85rem;">Aún no has encontrado ninguna palabra…</span>';
+    return;
+  }
+  list.innerHTML = '';
+  const sorted = [...foundWords].sort();
+  for (const w of sorted) {
+    const chip = document.createElement('span');
+    chip.className = 'found-word';
+    chip.textContent = w.toUpperCase();
+    if (new Set(w).size === 7) chip.style.borderColor = '#F5A623';
+    list.appendChild(chip);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LEADERBOARD
+═══════════════════════════════════════════════════════════════ */
+function renderLeaderboard(data) {
+  const list = document.getElementById('leaderboard');
+
+  const players = Object.entries(data).map(([id, p]) => ({
+    id, name: p.name || '?', score: p.score || 0, words: p.words || 0
+  }));
+
+  players.sort((a, b) => b.score - a.score || b.words - a.words);
+
+  if (players.length === 0) {
+    list.innerHTML = '<div class="lb-empty">Esperando jugadores…</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  const medals = ['🥇','🥈','🥉'];
+
+  players.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row' + (p.id === myPlayerId ? ' me' : '');
+
+    const rankStr = i < 3 ? medals[i] : `${i+1}`;
+    const isTop   = i < 3;
+
+    row.innerHTML = `
+      <div class="lb-rank ${isTop ? 'top' : ''}">${rankStr}</div>
+      <div class="lb-name">${escHtml(p.name)}${p.id === myPlayerId ? ' <span style="color:var(--honey-dark);font-size:0.75rem;">(tú)</span>' : ''}</div>
+      <div class="lb-words">${p.words} pal.</div>
+      <div class="lb-score">${p.score} pts</div>`;
+
+    list.appendChild(row);
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════════════════════════ */
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════════════════════ */
+let toastTimer = null;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent  = msg;
+  el.className    = 'show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2200);
+}
+
+function copyLink() {
+  const url = document.getElementById('shareUrl').value;
+  navigator.clipboard.writeText(url).then(() => showToast('¡Enlace copiado!', 'success'));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT — check URL for game code
+═══════════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const code   = params.get('game');
+  if (code) {
+    // Auto-navigate to join screen
+    loadWords(); // start loading in background
+    showScreen('screenJoin');
+    document.getElementById('joinCode').value = code.toUpperCase();
+  } else {
+    loadWords(); // preload in background
+  }
+});
+</script>
+</body>
+</html>
