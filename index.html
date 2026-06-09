@@ -80,14 +80,14 @@ header {
 
 .btn-sm { padding: 8px 18px; font-size: 0.82rem; }
 
-/* ── Text inputs ── */
-input[type="text"] {
+/* ── Text inputs & Selects ── */
+input[type="text"], select {
   width: 100%; padding: 12px 16px;
   border: 1px solid var(--grey-border); border-radius: var(--radius);
   font-size: 1rem; outline: none; font-family: inherit; color: var(--ink);
-  transition: border-color 0.2s;
+  transition: border-color 0.2s; background: var(--white);
 }
-input[type="text"]:focus { border-color: var(--ink); }
+input[type="text"]:focus, select:focus { border-color: var(--ink); }
 
 /* ── Common UI Elements ── */
 .screen-title { width: 100%; display: flex; align-items: center; gap: 12px; font-size: 1.1rem; font-weight: 800; }
@@ -139,17 +139,16 @@ input[type="text"]:focus { border-color: var(--ink); }
 #screenGame .screen-inner {
   width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 0 20px 28px;
 }
-.tabs { display: flex; width: 100%; border-bottom: 1px solid var(--divider); margin-bottom: 0; }
-.tab-btn {
-  flex: 1; padding: 14px 0; border: none; background: none; font-family: inherit; font-size: 0.85rem; font-weight: 700;
-  color: var(--ink-light); cursor: pointer; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; margin-bottom: -1px;
+
+/* Host Controls (Game Screen) */
+#hostGameControls {
+  display: none; width: 100%; background: #fafafa; border: 1px solid var(--grey-border); 
+  border-radius: var(--radius); padding: 12px; margin-bottom: 15px; 
+  align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
 }
-.tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
-.tab-panel { display: none; width: 100%; padding-top: 20px; }
-.tab-panel.active { display: block; }
 
 /* Score bar & UI */
-.score-bar { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 0 16px; }
+.score-bar { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 0 16px; border-bottom: 1px solid var(--divider); margin-bottom: 10px; }
 .score-main { display: flex; align-items: baseline; gap: 5px; }
 .score-num  { font-size: 2rem; font-weight: 900; line-height: 1; }
 .score-pts  { font-size: 0.8rem; color: var(--ink-light); font-weight: 600; }
@@ -186,7 +185,21 @@ input[type="text"]:focus { border-color: var(--ink); }
 .hex-cell .hex-letter { font-size: 1.25rem; font-weight: 700; font-family: 'Helvetica Neue', Arial, sans-serif; text-transform: uppercase; text-anchor: middle; pointer-events: none; }
 
 .action-row { display: flex; gap: 10px; justify-content: center; width: 100%; margin: 10px 0 4px; flex-wrap: wrap; }
-.found-section { width: 100%; margin-top: 18px; }
+
+/* Leaderboard */
+.lb-section { width: 100%; margin-top: 20px; border-top: 1px solid var(--divider); padding-top: 15px; }
+.lb-list { width: 100%; }
+.lb-row { display: flex; align-items: center; padding: 8px; gap: 12px; border-bottom: 1px solid var(--divider); }
+.lb-row:last-child { border-bottom: none; }
+.lb-row.me { background: #fafafa; border-radius: var(--radius); }
+.lb-rank  { width: 28px; font-size: 0.85rem; font-weight: 800; color: var(--ink-mid); text-align: center; flex-shrink:0; }
+.lb-name  { flex:1; font-size: 0.9rem; font-weight: 700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lb-words { font-size: 0.75rem; color: var(--ink-light); flex-shrink:0; min-width:50px; text-align:right; }
+.lb-score { font-weight: 800; font-size: 0.95rem; flex-shrink:0; min-width:48px; text-align:right; }
+.lb-empty { text-align:center; color:var(--ink-light); font-size:0.88rem; padding:12px 0; }
+
+/* Found Words */
+.found-section { width: 100%; margin-top: 20px; border-top: 1px solid var(--divider); padding-top: 15px; }
 .found-header  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .found-header-lbl { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-mid); }
 .found-count-lbl  { font-size: 0.8rem; color: var(--ink-light); }
@@ -202,17 +215,6 @@ input[type="text"]:focus { border-color: var(--ink); }
 .found-word.pangram { background: var(--yellow); color: var(--ink); border-color: transparent; }
 .found-empty { font-size: 0.85rem; color: var(--ink-light); padding: 6px 0; }
 @keyframes popIn { from{ transform:scale(0); opacity:0 } to{ transform:scale(1); opacity:1 } }
-
-/* Leaderboard */
-.lb-list { width: 100%; }
-.lb-row { display: flex; align-items: center; padding: 11px 8px; gap: 12px; border-bottom: 1px solid var(--divider); }
-.lb-row:last-child { border-bottom: none; }
-.lb-row.me { background: #fafafa; border-radius: var(--radius); }
-.lb-rank  { width: 28px; font-size: 0.85rem; font-weight: 800; color: var(--ink-mid); text-align: center; flex-shrink:0; }
-.lb-name  { flex:1; font-size: 0.9rem; font-weight: 700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.lb-words { font-size: 0.75rem; color: var(--ink-light); flex-shrink:0; min-width:50px; text-align:right; }
-.lb-score { font-weight: 800; font-size: 0.95rem; flex-shrink:0; min-width:48px; text-align:right; }
-.lb-empty { text-align:center; color:var(--ink-light); font-size:0.88rem; padding:24px 0; }
 
 /* Toast & Loading */
 #toast { position: fixed; top: 64px; left: 50%; transform: translateX(-50%) translateY(-12px); background: var(--ink); color: var(--white); padding: 10px 20px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.18s; z-index: 9999; white-space: nowrap; box-shadow: 0 4px 12px var(--shadow); }
@@ -301,6 +303,14 @@ input[type="text"]:focus { border-color: var(--ink); }
   </div>
 
   <div id="hostControls" style="display:none; width:100%;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px;">
+      <div class="field-label" style="margin:0;">Tiempo:</div>
+      <select id="lobbyTimerSelect" style="padding:8px; border-radius:var(--radius); font-weight:700;">
+        <option value="180">3 minutos</option>
+        <option value="240">4 minutos</option>
+        <option value="300">5 minutos</option>
+      </select>
+    </div>
     <button class="btn btn-primary" style="width:100%;" onclick="triggerStartGame()">¡Iniciar Juego Ahora!</button>
   </div>
 
@@ -312,46 +322,51 @@ input[type="text"]:focus { border-color: var(--ink); }
 
 <div id="screenGame" class="screen" style="padding:0;max-width:500px;">
 <div class="screen-inner">
-  <div class="tabs">
-    <button class="tab-btn active" id="tabGame"  onclick="switchTab('Game')">🍯 Juego</button>
-    <button class="tab-btn"        id="tabBoard" onclick="switchTab('Board')">🏆 Tabla</button>
+  
+  <div id="hostGameControls">
+    <div style="display:flex; align-items:center; gap:8px; flex:1;">
+      <span class="field-label" style="margin:0;">⚙️ Config:</span>
+      <select id="gameTimerSelect" style="padding:6px; font-size:0.85rem; border-radius:4px; flex:1;">
+        <option value="180">3 min</option>
+        <option value="240">4 min</option>
+        <option value="300">5 min</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="regenerateGame()">🔄 Nuevo Panal</button>
   </div>
 
-  <div class="tab-panel active" id="panelGame">
-    <div class="score-bar">
-      <div>
-        <div class="score-main"><span class="score-num" id="myScore">0</span><span class="score-pts">puntos</span></div>
-        <div class="rank-txt" id="myRank">Principiante</div>
-      </div>
-      <div class="timer-display" id="gameTimer">03:00</div>
-      <div class="score-right">
-        <div class="wc-num" id="myWordCount">0</div>
-        <div class="wc-lbl">palabras</div>
-      </div>
+  <div class="score-bar">
+    <div>
+      <div class="score-main"><span class="score-num" id="myScore">0</span><span class="score-pts">puntos</span></div>
+      <div class="rank-txt" id="myRank">Principiante</div>
     </div>
-    
-    <div class="word-display" id="wordDisplay"><span id="wordText"></span><span class="word-cursor"></span></div>
-    
-    <div class="hive-container"><svg id="hiveSvg" xmlns="http://www.w3.org/2000/svg"></svg></div>
-    
-    <div class="action-row">
-      <button class="btn btn-outline btn-sm" onclick="deleteLetter()">⌫ Borrar</button>
-      <button class="btn btn-outline btn-sm" onclick="shuffleOuter()">🔀 Mezclar</button>
-      <button class="btn btn-outline btn-sm" onclick="submitWord()">Enviar ↵</button>
-    </div>
-    <div class="found-section">
-      <div class="found-header"><span class="found-header-lbl">Mis palabras</span><span class="found-count-lbl" id="foundCountLabel">0 palabras</span></div>
-      <div class="found-list" id="foundList"><span class="found-empty">Aún no has encontrado ninguna palabra…</span></div>
+    <div class="timer-display" id="gameTimer">00:00</div>
+    <div class="score-right">
+      <div class="wc-num" id="myWordCount">0</div>
+      <div class="wc-lbl">palabras</div>
     </div>
   </div>
+  
+  <div class="word-display" id="wordDisplay"><span id="wordText"></span><span class="word-cursor"></span></div>
+  
+  <div class="hive-container"><svg id="hiveSvg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  
+  <div class="action-row">
+    <button class="btn btn-outline btn-sm" onclick="deleteLetter()">⌫ Borrar</button>
+    <button class="btn btn-outline btn-sm" onclick="shuffleOuter()">🔀 Mezclar</button>
+    <button class="btn btn-outline btn-sm" onclick="submitWord()">Enviar ↵</button>
+  </div>
 
-  <div class="tab-panel" id="panelBoard">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div class="field-label" style="margin:0;">Clasificación en vivo</div>
-      <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-    </div>
+  <div class="lb-section">
+    <div class="field-label" style="margin-bottom:8px;">Clasificación en vivo</div>
     <div class="lb-list" id="leaderboard"><div class="lb-empty">Esperando jugadores…</div></div>
   </div>
+
+  <div class="found-section">
+    <div class="found-header"><span class="found-header-lbl">Mis palabras</span><span class="found-count-lbl" id="foundCountLabel">0 palabras</span></div>
+    <div class="found-list" id="foundList"><span class="found-empty">Aún no has encontrado ninguna palabra…</span></div>
+  </div>
+
 </div>
 </div>
 
@@ -390,10 +405,11 @@ let myPlayerId     = null;
 let hostId         = null;
 let wordsLoaded    = false;
 let gameData       = null;
-let countdownFired = false;
+
+let lastCountdownId = null;
 
 // Timer State
-let timeRemaining  = 180; // 3 minutes
+let timeRemaining  = 180;
 let gameTimerInterval = null;
 let isGameOver     = false;
 
@@ -501,7 +517,6 @@ async function joinLobby() {
   const data = snapshot.val();
   
   if (!data) { showToast('Sala no encontrada', 'error'); return; }
-  if (data.status !== 'lobby') { showToast('Esta partida ya comenzó', 'error'); return; }
 
   myName     = name;
   sessionId  = code;
@@ -535,8 +550,14 @@ function setupGameListener() {
       renderLobbyPlayers(data.players);
       renderLeaderboard(data.players);
     }
+    
+    // Toggle Host Game Controls
+    const hgc = document.getElementById('hostGameControls');
+    if (hgc) hgc.style.display = (myPlayerId === hostId) ? 'flex' : 'none';
 
-    if (data.status === 'countdown' && !countdownFired) {
+    // Trigger New Game / Round
+    if (data.countdownId && data.countdownId !== lastCountdownId) {
+      lastCountdownId = data.countdownId;
       runCountdownAndStart();
     }
   });
@@ -555,11 +576,38 @@ function renderLobbyPlayers(playersObj) {
 
 function triggerStartGame() {
   if (!dbRef) return;
-  dbRef.update({ status: 'countdown' });
+  const initialTimer = parseInt(document.getElementById('lobbyTimerSelect').value) || 180;
+  dbRef.update({ 
+    timer: initialTimer,
+    countdownId: Date.now() 
+  });
+}
+
+async function regenerateGame() {
+  if (!dbRef || !wordsLoaded) return;
+  const newPuzzle = generatePuzzle();
+  if (!newPuzzle) { showToast('Error generando nuevo panal', 'error'); return; }
+  
+  const newTimer = parseInt(document.getElementById('gameTimerSelect').value) || 180;
+  
+  const updates = {};
+  if (gameData && gameData.players) {
+    Object.keys(gameData.players).forEach(pid => {
+      updates['players/' + pid + '/score'] = 0;
+      updates['players/' + pid + '/words'] = 0;
+    });
+  }
+  updates['puzzle'] = newPuzzle;
+  updates['timer'] = newTimer;
+  updates['countdownId'] = Date.now();
+  
+  await dbRef.update(updates);
 }
 
 function runCountdownAndStart() {
-  countdownFired = true;
+  isGameOver = true; // Block input during countdown
+  if (gameTimerInterval) clearInterval(gameTimerInterval);
+  
   const overlay = document.getElementById('countdownOverlay');
   const numDisplay = document.getElementById('countdownNumber');
   overlay.classList.add('active');
@@ -595,7 +643,11 @@ function initializeLocalGame() {
 
   currentWord = ''; foundWords = new Set(); myScore = 0;
   isGameOver = false;
-  timeRemaining = 180;
+  timeRemaining = gameData.timer || 180;
+  
+  // Sync the timer select UI to the current value
+  document.getElementById('gameTimerSelect').value = timeRemaining;
+  document.getElementById('wordText').textContent = '';
   
   updateTimerUI();
   if (gameTimerInterval) clearInterval(gameTimerInterval);
@@ -605,11 +657,11 @@ function initializeLocalGame() {
   renderHive();
   updateScoreDisplay();
   renderFoundWords();
-  switchTab('Game');
   document.addEventListener('keydown', handleKey);
 }
 
 function pushScore() {
+  if (isGameOver) return;
   db.ref('games/' + sessionId + '/players/' + myPlayerId).update({ 
     score: myScore, 
     words: foundWords.size 
@@ -649,11 +701,6 @@ function endGame() {
   const el = document.getElementById('gameTimer');
   el.textContent = "00:00";
   el.classList.remove('danger');
-
-  // Automatically switch to the leaderboard to show final results
-  setTimeout(() => {
-    switchTab('Board');
-  }, 2000);
 }
 
 /* ══════════════════════════════════════════════
@@ -829,7 +876,6 @@ function renderLeaderboard(data) {
 }
 
 const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-function switchTab(tab) { ['Game','Board'].forEach(t => { document.getElementById('tab'+t).classList.toggle('active', t===tab); document.getElementById('panel'+t).classList.toggle('active', t===tab); }); }
 
 let toastTimer;
 function showToast(msg, type='') {
