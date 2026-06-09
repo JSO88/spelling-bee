@@ -1,14 +1,3 @@
-This is a fantastic upgrade. Shifting to a blind lobby format prevents the host from getting a head start and makes the whole experience much more competitive.
-
-To achieve this, I completely redesigned the flow.
-
-1. **The Game Code:** Instead of using the puzzle letters as the code (which gives the game away), the app now generates a random 6-character alphanumeric code (e.g., `X7K9P2`).
-2. **The Lobby:** When you create or join a game, you enter a "Sala de Espera" (Lobby). The puzzle is generated silently in the background and synced to Firebase, but the UI strictly hides it.
-3. **The Countdown:** The host gets a "Start Game" button. Clicking it triggers a synchronized Firebase event that fires a 3-second visual countdown for everyone in the lobby before revealing the game board.
-
-Here is the fully updated, copy-pasteable `index.html`:
-
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -810,5 +799,3 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
-```
