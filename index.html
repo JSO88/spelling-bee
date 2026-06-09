@@ -5,505 +5,343 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panal de Letras</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-  /* ── Design tokens ── */
-  :root {
-    --honey:      #F5A623;
-    --honey-dark: #D4831A;
-    --honey-pale: #FEF3DC;
-    --ink:        #1A1A2E;
-    --ink-light:  #4A4A6A;
-    --white:      #FFFFFF;
-    --cell-bg:    #FDF6E3;
-    --found:      #2ECC71;
-    --error:      #E74C3C;
-    --shadow:     rgba(26,26,46,0.12);
-    --radius:     14px;
-  }
+/* ── Palette (NYT-inspired: Strictly White, Grey, Yellow, Black) ── */
+:root {
+  --yellow:      #F7DA21;
+  --yellow-dark: #D4B914;
+  --grey-hex:    #E6E6E6;
+  --grey-border: #DCDCDC;
+  --white:       #FFFFFF;
+  --bg:          #FFFFFF;
+  --ink:         #111111;
+  --ink-mid:     #666666;
+  --ink-light:   #999999;
+  --divider:     #E8E8E8;
+  --radius:      8px;
+  --shadow:      rgba(0,0,0,0.08);
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: var(--cell-bg);
-    color: var(--ink);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-  /* ── Header ── */
-  header {
-    width: 100%;
-    background: var(--ink);
-    color: var(--white);
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 2px 8px var(--shadow);
-  }
+/* ── Header ── */
+header {
+  width: 100%;
+  background: var(--white);
+  border-bottom: 1px solid var(--divider);
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
 
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.3rem;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-  }
+.logo {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+}
 
-  .logo span { color: var(--honey); }
+.logo span { color: var(--ink-light); font-weight: 400; }
 
-  .header-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
+/* ── Screens ── */
+.screen { display: none; width: 100%; max-width: 500px; padding: 28px 20px; }
+.screen.active { display: flex; flex-direction: column; align-items: center; gap: 18px; }
 
-  /* ── Screens ── */
-  .screen { display: none; width: 100%; max-width: 560px; padding: 24px 16px; }
-  .screen.active { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 13px 26px; border: 1px solid transparent; border-radius: 50px;
+  font-size: 0.9rem; font-weight: 700; cursor: pointer;
+  transition: background 0.15s, transform 0.08s, border-color 0.15s;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
 
-  /* ── Cards ── */
-  .card {
-    background: var(--white);
-    border-radius: var(--radius);
-    padding: 24px;
-    width: 100%;
-    box-shadow: 0 2px 12px var(--shadow);
-  }
+.btn-primary   { background: var(--ink); color: var(--white); }
+.btn-primary:hover { background: #333; }
 
-  .card h2 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 16px;
-    color: var(--ink);
-  }
+.btn-outline   { background: var(--white); color: var(--ink); border-color: var(--grey-border); }
+.btn-outline:hover { background: var(--grey-hex); }
 
-  /* ── Buttons ── */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 11px 22px;
-    border: none;
-    border-radius: 50px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
-  }
-  .btn:active { transform: scale(0.97); }
+.btn-yellow    { background: var(--yellow); color: var(--ink); }
+.btn-yellow:hover { background: var(--yellow-dark); }
 
-  .btn-primary {
-    background: var(--honey);
-    color: var(--ink);
-    box-shadow: 0 2px 8px rgba(245,166,35,0.35);
-  }
-  .btn-primary:hover { background: var(--honey-dark); color: var(--white); }
+.btn-sm { padding: 8px 18px; font-size: 0.82rem; }
 
-  .btn-secondary {
-    background: var(--ink);
-    color: var(--white);
-  }
-  .btn-secondary:hover { background: #2d2d4e; }
+/* ── Text inputs ── */
+input[type="text"] {
+  width: 100%; padding: 12px 16px;
+  border: 1px solid var(--grey-border); border-radius: var(--radius);
+  font-size: 1rem; outline: none; font-family: inherit; color: var(--ink);
+  transition: border-color 0.2s;
+}
+input[type="text"]:focus { border-color: var(--ink); }
 
-  .btn-ghost {
-    background: transparent;
-    color: var(--ink-light);
-    border: 2px solid #ddd;
-  }
-  .btn-ghost:hover { border-color: var(--honey); color: var(--honey-dark); }
+/* ── Divider ── */
+.divider { width: 100%; height: 1px; background: var(--divider); }
 
-  .btn-sm { padding: 7px 16px; font-size: 0.82rem; }
+/* ── Home screen ── */
+.home-hero {
+  text-align: center;
+  padding: 16px 0 8px;
+}
+.home-hero h1 { font-size: 2rem; font-weight: 900; letter-spacing: -0.5px; }
+.home-hero p  { color: var(--ink-mid); margin-top: 8px; font-size: 0.92rem; line-height: 1.5; }
 
-  /* ── Input ── */
-  input[type="text"] {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid #e0e0e0;
-    border-radius: var(--radius);
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input[type="text"]:focus { border-color: var(--honey); }
+.choice-list { display: flex; flex-direction: column; gap: 10px; width: 100%; }
 
-  /* ── Setup Screen ── */
-  .setup-choice {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-  }
+.choice-btn {
+  width: 100%; padding: 16px 18px;
+  border: 1px solid var(--grey-border); border-radius: var(--radius);
+  background: var(--white); cursor: pointer; text-align: left;
+  transition: border-color 0.18s, background 0.18s;
+  font-family: inherit; color: var(--ink);
+}
+.choice-btn:hover { border-color: var(--ink); background: #fafafa; }
+.choice-btn .ct { font-weight: 700; font-size: 0.95rem; }
+.choice-btn .cd { font-size: 0.8rem; color: var(--ink-light); margin-top: 3px; }
 
-  .choice-btn {
-    width: 100%;
-    padding: 18px;
-    border-radius: var(--radius);
-    border: 2px solid #eee;
-    background: var(--white);
-    cursor: pointer;
-    text-align: left;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .choice-btn:hover { border-color: var(--honey); background: var(--honey-pale); }
-  .choice-btn .choice-title { font-weight: 700; font-size: 1rem; color: var(--ink); }
-  .choice-btn .choice-desc { font-size: 0.83rem; color: var(--ink-light); margin-top: 3px; }
+/* ── Create / Join screens ── */
+.screen-title {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  font-size: 1.1rem; font-weight: 800;
+}
 
-  /* ── Honeycomb ── */
-  .hive-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
-    margin: 10px 0 4px;
-    user-select: none;
-  }
+.field-label {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--ink-mid); margin-bottom: 7px;
+}
 
-  .hive-row {
-    display: flex;
-    gap: 0;
-  }
+.field-block { width: 100%; }
 
-  .hex-btn {
-    width: 72px;
-    height: 72px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.08s;
-  }
-  .hex-btn:active { transform: scale(0.92); }
+.puzzle-preview {
+  width: 100%;
+  border: 1px solid var(--grey-border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
 
-  .hex-btn svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.preview-letters {
+  display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px;
+}
 
-  .hex-btn .hex-letter {
-    position: relative;
-    z-index: 1;
-    font-size: 1.55rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: var(--ink);
-    letter-spacing: -0.5px;
-  }
+.letter-chip {
+  width: 34px; height: 34px; border-radius: 6px;
+  background: var(--grey-hex); border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 0.95rem; text-transform: uppercase;
+}
+.letter-chip.is-center { background: var(--yellow); }
 
-  .hex-btn.center .hex-letter { color: var(--white); }
+.meta-row {
+  display: flex; justify-content: space-between;
+  font-size: 0.82rem; color: var(--ink-mid);
+  padding: 5px 0; border-top: 1px solid var(--divider);
+}
+.meta-row strong { color: var(--ink); font-weight: 700; }
 
-  /* ── Input area ── */
-  .input-area {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
+.btn-row { display: flex; gap: 10px; width: 100%; }
+.btn-row .btn { flex: 1; }
 
-  .word-display {
-    font-size: 1.6rem;
-    font-weight: 800;
-    letter-spacing: 4px;
-    min-height: 2.2rem;
-    text-transform: uppercase;
-    color: var(--ink);
-    text-align: center;
-    min-width: 200px;
-  }
+/* ══════════════════════════════════════
+   HONEYCOMB  — pure SVG, pixel-perfect
+══════════════════════════════════════ */
+.hive-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 0 4px;
+  user-select: none;
+}
 
-  .word-display.shake {
-    animation: shake 0.35s ease;
-    color: var(--error);
-  }
+#hiveSvg {
+  overflow: visible;
+}
 
-  .word-display.bounce {
-    animation: bounce-in 0.3s ease;
-    color: var(--found);
-  }
+.hex-cell { cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+.hex-cell polygon { transition: transform 0.1s; transform-origin: center; }
+.hex-cell:active polygon { transform: scale(0.95); }
+.hex-cell .hex-letter {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  text-transform: uppercase;
+  text-anchor: middle;
+  pointer-events: none;
+}
 
-  @keyframes shake {
-    0%,100% { transform: translateX(0); }
-    20%      { transform: translateX(-8px); }
-    40%      { transform: translateX(8px); }
-    60%      { transform: translateX(-5px); }
-    80%      { transform: translateX(5px); }
-  }
+/* ── Game screen ── */
+#screenGame .screen-inner {
+  width: 100%; max-width: 500px;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  padding: 0 20px 28px;
+}
 
-  @keyframes bounce-in {
-    0%   { transform: scale(0.85); }
-    60%  { transform: scale(1.12); }
-    100% { transform: scale(1); }
-  }
+/* Tabs */
+.tabs {
+  display: flex; width: 100%;
+  border-bottom: 1px solid var(--divider);
+  margin-bottom: 0;
+}
+.tab-btn {
+  flex: 1; padding: 14px 0; border: none; background: none;
+  font-family: inherit; font-size: 0.85rem; font-weight: 700;
+  color: var(--ink-light); cursor: pointer; border-bottom: 3px solid transparent;
+  transition: color 0.15s, border-color 0.15s; margin-bottom: -1px;
+}
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
 
-  .word-cursor {
-    display: inline-block;
-    width: 2px;
-    height: 1.4rem;
-    background: var(--honey-dark);
-    animation: blink 1s step-end infinite;
-    vertical-align: middle;
-    margin-left: 2px;
-  }
+.tab-panel { display: none; width: 100%; padding-top: 20px; }
+.tab-panel.active { display: block; }
 
-  @keyframes blink { 50% { opacity: 0; } }
+/* Score bar */
+.score-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 12px 0 16px;
+}
+.score-main { display: flex; align-items: baseline; gap: 5px; }
+.score-num  { font-size: 2rem; font-weight: 900; line-height: 1; }
+.score-pts  { font-size: 0.8rem; color: var(--ink-light); font-weight: 600; }
+.rank-txt   { font-size: 0.82rem; color: var(--ink-mid); margin-top: 2px; }
+.score-right { text-align: right; }
+.wc-num { font-size: 1.5rem; font-weight: 900; }
+.wc-lbl { font-size: 0.75rem; color: var(--ink-light); }
 
-  .controls {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
+/* Word display */
+.word-display {
+  font-size: 1.7rem; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; text-align: center;
+  min-height: 2.4rem; color: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  padding: 8px 0 4px; width: 100%;
+}
+/* Removed red and green completely from word animations */
+.word-display.shake { animation: shake 0.35s; color: var(--ink-light); }
+.word-display.bounce { animation: bounceIn 0.3s; color: var(--ink); }
 
-  /* ── Toast ── */
-  #toast {
-    position: fixed;
-    top: 70px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-20px);
-    background: var(--ink);
-    color: var(--white);
-    padding: 10px 22px;
-    border-radius: 50px;
-    font-weight: 700;
-    font-size: 0.9rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s, transform 0.2s;
-    z-index: 9999;
-    white-space: nowrap;
-  }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  #toast.success { background: var(--found); }
-  #toast.error   { background: var(--error); }
+@keyframes shake {
+  0%,100%{ transform:translateX(0) }
+  20%{ transform:translateX(-6px) }
+  40%{ transform:translateX(6px) }
+  60%{ transform:translateX(-4px) }
+  80%{ transform:translateX(4px) }
+}
+@keyframes bounceIn {
+  0%{ transform:scale(.85) }
+  60%{ transform:scale(1.1) }
+  100%{ transform:scale(1) }
+}
 
-  /* ── Found words ── */
-  .found-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    min-height: 32px;
-  }
+.word-cursor {
+  display: inline-block; width: 2px; height: 1.5rem;
+  background: var(--yellow); animation: blink 1s step-end infinite;
+  vertical-align: middle; margin-left: 3px;
+}
+@keyframes blink { 50%{ opacity:0 } }
 
-  .found-word {
-    background: var(--honey-pale);
-    border: 1.5px solid var(--honey);
-    color: var(--ink);
-    border-radius: 50px;
-    padding: 4px 12px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    animation: pop-in 0.2s ease;
-  }
+/* Action buttons */
+.action-row {
+  display: flex; gap: 10px; justify-content: center;
+  width: 100%; margin: 10px 0 4px;
+  flex-wrap: wrap;
+}
 
-  @keyframes pop-in {
-    from { transform: scale(0); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
-  }
+/* Found words */
+.found-section { width: 100%; margin-top: 18px; }
+.found-header  {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.found-header-lbl { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-mid); }
+.found-count-lbl  { font-size: 0.8rem; color: var(--ink-light); }
 
-  /* ── Score / Progress ── */
-  .score-display {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-  }
+.found-list {
+  display: flex; flex-wrap: wrap; gap: 7px;
+  min-height: 36px;
+}
+.found-word {
+  border: 1px solid var(--grey-border); border-radius: 50px;
+  padding: 5px 13px; font-size: 0.8rem; font-weight: 700; color: var(--ink-mid);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  animation: popIn 0.2s ease; background: var(--white);
+}
+.found-word.pangram {
+  background: var(--yellow); color: var(--ink); border-color: transparent;
+}
+.found-empty { font-size: 0.85rem; color: var(--ink-light); padding: 6px 0; }
 
-  .score-number {
-    font-size: 2.2rem;
-    font-weight: 900;
-    color: var(--honey-dark);
-    line-height: 1;
-  }
+@keyframes popIn {
+  from{ transform:scale(0); opacity:0 }
+  to{ transform:scale(1); opacity:1 }
+}
 
-  .score-label {
-    font-size: 0.8rem;
-    color: var(--ink-light);
-    font-weight: 600;
-  }
+/* Share */
+.share-section { width: 100%; margin-top: 20px; }
+.share-row { display: flex; gap: 8px; margin-top: 8px; }
+.share-row input { flex: 1; font-size: 0.78rem; padding: 10px 14px; }
 
-  .rank-label {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--ink-light);
-    margin-top: 4px;
-  }
+/* ── Leaderboard ── */
+.lb-list { width: 100%; }
+.lb-row {
+  display: flex; align-items: center;
+  padding: 11px 8px; gap: 12px;
+  border-bottom: 1px solid var(--divider);
+}
+.lb-row:last-child { border-bottom: none; }
+.lb-row.me { background: #fafafa; border-radius: var(--radius); }
+.lb-rank  { width: 28px; font-size: 0.85rem; font-weight: 800; color: var(--ink-mid); text-align: center; flex-shrink:0; }
+.lb-name  { flex:1; font-size: 0.9rem; font-weight: 700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lb-words { font-size: 0.75rem; color: var(--ink-light); flex-shrink:0; min-width:50px; text-align:right; }
+.lb-score { font-weight: 800; font-size: 0.95rem; flex-shrink:0; min-width:48px; text-align:right; }
+.lb-empty { text-align:center; color:var(--ink-light); font-size:0.88rem; padding:24px 0; }
 
-  /* ── Leaderboard ── */
-  .leaderboard-list { width: 100%; }
+/* ── Toast ── */
+#toast {
+  position: fixed; top: 64px; left: 50%;
+  transform: translateX(-50%) translateY(-12px);
+  background: var(--ink); color: var(--white);
+  padding: 10px 20px; border-radius: 50px;
+  font-weight: 700; font-size: 0.85rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.18s, transform 0.18s;
+  z-index: 9999; white-space: nowrap;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+#toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
+/* All success/pangrams are now purely yellow and black, errors are black and white */
+#toast.success { background: var(--yellow); color: var(--ink); }
+#toast.error   { background: var(--ink); color: var(--white); }
+#toast.pangram { background: var(--yellow); color: var(--ink); }
 
-  .lb-row {
-    display: flex;
-    align-items: center;
-    padding: 10px 4px;
-    border-bottom: 1px solid #f0f0f0;
-    gap: 12px;
-    transition: background 0.2s;
-  }
-  .lb-row:last-child { border-bottom: none; }
-  .lb-row.me { background: var(--honey-pale); border-radius: 8px; }
+/* Loading dots */
+.dots { display:flex; gap:5px; justify-content:center; }
+.dot  { width:7px; height:7px; border-radius:50%; background:var(--ink-light); animation:pulse 1.2s ease-in-out infinite; }
+.dot:nth-child(2){ animation-delay:.2s }
+.dot:nth-child(3){ animation-delay:.4s }
+@keyframes pulse { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
 
-  .lb-rank {
-    width: 26px;
-    font-weight: 800;
-    font-size: 0.9rem;
-    color: var(--ink-light);
-    text-align: center;
-    flex-shrink: 0;
-  }
-  .lb-rank.top { color: var(--honey-dark); font-size: 1rem; }
-
-  .lb-name {
-    flex: 1;
-    font-weight: 700;
-    font-size: 0.95rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .lb-score {
-    font-weight: 800;
-    font-size: 1rem;
-    color: var(--honey-dark);
-    flex-shrink: 0;
-  }
-
-  .lb-words {
-    font-size: 0.75rem;
-    color: var(--ink-light);
-    flex-shrink: 0;
-    min-width: 60px;
-    text-align: right;
-  }
-
-  .lb-empty {
-    text-align: center;
-    color: var(--ink-light);
-    font-size: 0.9rem;
-    padding: 20px;
-  }
-
-  /* ── Share box ── */
-  .share-box {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    width: 100%;
-  }
-
-  .share-box input {
-    flex: 1;
-    font-size: 0.8rem;
-    padding: 10px 14px;
-  }
-
-  /* ── Letters badge ── */
-  .letters-badge {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin: 4px 0;
-  }
-
-  .letter-chip {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: var(--honey-pale);
-    border: 2px solid var(--honey);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 1rem;
-    text-transform: uppercase;
-    color: var(--ink);
-  }
-  .letter-chip.center-chip {
-    background: var(--honey);
-    color: var(--white);
-    border-color: var(--honey-dark);
-  }
-
-  /* ── Loading ── */
-  .loading-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--honey);
-    animation: pulse 1.2s ease-in-out infinite;
-  }
-  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
-  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes pulse { 0%,80%,100% { transform: scale(0); } 40% { transform: scale(1); } }
-
-  /* ── Mobile ── */
-  @media (max-width: 420px) {
-    .hex-btn { width: 62px; height: 62px; }
-    .hex-btn .hex-letter { font-size: 1.3rem; }
-    .word-display { font-size: 1.3rem; }
-  }
-
-  /* ── Tabs ── */
-  .tabs {
-    display: flex;
-    gap: 0;
-    width: 100%;
-    background: #f3f3f3;
-    border-radius: 10px;
-    padding: 3px;
-  }
-  .tab {
-    flex: 1;
-    padding: 9px;
-    border: none;
-    background: none;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 0.85rem;
-    cursor: pointer;
-    color: var(--ink-light);
-    transition: background 0.2s, color 0.2s;
-  }
-  .tab.active {
-    background: var(--white);
-    color: var(--ink);
-    box-shadow: 0 1px 4px var(--shadow);
-  }
-
-  .tab-panel { display: none; width: 100%; }
-  .tab-panel.active { display: block; }
-
-  .setup-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--ink-light);
-    margin-bottom: 6px;
-  }
-
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.88rem;
-    color: var(--ink-light);
-    padding: 4px 0;
-  }
-  .info-row strong { color: var(--ink); }
+@media(max-width:400px){
+  #hiveSvg { transform-origin: center; }
+}
 </style>
 </head>
 <body>
@@ -511,182 +349,148 @@
 <div id="toast"></div>
 
 <header>
-  <div class="logo">🍯 <span>Panal</span> de Letras</div>
-  <div class="header-actions" id="headerActions"></div>
+  <div class="logo">Panal <span>de Letras</span></div>
 </header>
 
-<!-- ══════════════════════════════════ SCREEN: HOME ══════════════════════════════════ -->
 <div id="screenHome" class="screen active">
-  <div style="text-align:center; padding: 10px 0 0;">
-    <div style="font-size:4rem; line-height:1;">🍯</div>
-    <h1 style="font-size:1.8rem;font-weight:900;margin-top:8px;">Panal de Letras</h1>
-    <p style="color:var(--ink-light);margin-top:6px;font-size:0.95rem;">
-      Forma palabras usando las letras del panal.<br>¡La letra central siempre debe estar!
-    </p>
+  <div class="home-hero">
+    <div style="font-size:3rem;margin-bottom:10px;">🍯</div>
+    <h1>Panal de Letras</h1>
+    <p>Forma palabras usando las letras del panal.<br>¡La letra <strong>amarilla</strong> siempre debe estar incluida!</p>
   </div>
 
-  <div class="card">
-    <div class="setup-choice">
-      <button class="choice-btn" onclick="showCreatePuzzle()">
-        <div class="choice-title">🎲 Crear partida</div>
-        <div class="choice-desc">Genera un nuevo panal y comparte el enlace con tus amigos</div>
-      </button>
-      <button class="choice-btn" onclick="showJoinPuzzle()">
-        <div class="choice-title">🔗 Unirse con código</div>
-        <div class="choice-desc">Escribe el código que te compartieron</div>
-      </button>
-    </div>
+  <div class="choice-list">
+    <button class="choice-btn" onclick="showCreatePuzzle()">
+      <div class="ct">🎲 Crear partida</div>
+      <div class="cd">Genera un panal y comparte el enlace con tus amigos</div>
+    </button>
+    <button class="choice-btn" onclick="showJoinScreen()">
+      <div class="ct">🔗 Unirse con código</div>
+      <div class="cd">Escribe el código que te compartieron</div>
+    </button>
   </div>
 
-  <div id="loadingWords" style="display:none; text-align:center; color:var(--ink-light); font-size:0.9rem;">
-    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:8px;">
-      <div class="loading-dot"></div>
-      <div class="loading-dot"></div>
-      <div class="loading-dot"></div>
+  <div id="loadingWords" style="display:none;text-align:center;color:var(--ink-light);font-size:0.85rem;">
+    <div class="dots" style="margin-bottom:8px;">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
     </div>
     Cargando diccionario…
   </div>
 </div>
 
-<!-- ══════════════════════════════════ SCREEN: CREATE ══════════════════════════════════ -->
 <div id="screenCreate" class="screen">
-  <div style="width:100%;display:flex;align-items:center;gap:10px;">
-    <button class="btn btn-ghost btn-sm" onclick="goHome()">← Atrás</button>
-    <h2 style="font-weight:800;font-size:1.1rem;">Crear partida</h2>
+  <div class="screen-title">
+    <button class="btn btn-outline btn-sm" onclick="goHome()">← Atrás</button>
+    Crear partida
   </div>
 
-  <div class="card" id="puzzlePreview">
-    <div class="setup-label">Letras del panal</div>
-    <div class="letters-badge" id="previewLetters"></div>
-    <div class="info-row" style="margin-top:12px;">
-      <span>Palabras válidas</span>
-      <strong id="previewCount">–</strong>
-    </div>
-    <div class="info-row">
-      <span>Pangrama</span>
-      <strong id="previewPangram">–</strong>
-    </div>
+  <div class="puzzle-preview">
+    <div class="field-label">Letras del panal</div>
+    <div class="preview-letters" id="previewLetters"></div>
+    <div class="meta-row"><span>Palabras válidas</span><strong id="previewCount">–</strong></div>
+    <div class="meta-row"><span>Pangrama</span><strong id="previewPangram">–</strong></div>
   </div>
 
-  <div class="card">
-    <div class="setup-label">Tu nombre</div>
+  <div class="field-block">
+    <div class="field-label">Tu nombre</div>
     <input type="text" id="createName" placeholder="Escribe tu nombre" maxlength="20">
   </div>
 
-  <div style="display:flex;gap:10px;width:100%;flex-wrap:wrap;">
-    <button class="btn btn-ghost" onclick="regeneratePuzzle()" style="flex:1;">🎲 Otro panal</button>
-    <button class="btn btn-primary" onclick="startAsHost()" style="flex:2;">Crear y jugar →</button>
+  <div class="btn-row">
+    <button class="btn btn-outline" onclick="regeneratePuzzle()">🎲 Otro</button>
+    <button class="btn btn-primary" style="flex:2;" onclick="startAsHost()">Crear y jugar →</button>
   </div>
 </div>
 
-<!-- ══════════════════════════════════ SCREEN: JOIN ══════════════════════════════════ -->
 <div id="screenJoin" class="screen">
-  <div style="width:100%;display:flex;align-items:center;gap:10px;">
-    <button class="btn btn-ghost btn-sm" onclick="goHome()">← Atrás</button>
-    <h2 style="font-weight:800;font-size:1.1rem;">Unirse a partida</h2>
+  <div class="screen-title">
+    <button class="btn btn-outline btn-sm" onclick="goHome()">← Atrás</button>
+    Unirse a partida
   </div>
 
-  <div class="card">
-    <div class="setup-label">Código de partida</div>
-    <input type="text" id="joinCode" placeholder="Ej: ABCDE123" maxlength="30" oninput="this.value=this.value.toUpperCase()">
+  <div class="field-block">
+    <div class="field-label">Código de partida</div>
+    <input type="text" id="joinCode" placeholder="Ej: ABCDEFG_A" maxlength="30" oninput="this.value=this.value.toUpperCase()">
   </div>
 
-  <div class="card">
-    <div class="setup-label">Tu nombre</div>
+  <div class="field-block">
+    <div class="field-label">Tu nombre</div>
     <input type="text" id="joinName" placeholder="Escribe tu nombre" maxlength="20">
   </div>
 
   <button class="btn btn-primary" style="width:100%;" onclick="joinGame()">Unirme →</button>
 </div>
 
-<!-- ══════════════════════════════════ SCREEN: GAME ══════════════════════════════════ -->
-<div id="screenGame" class="screen">
+<div id="screenGame" class="screen" style="padding:0;max-width:500px;">
+<div class="screen-inner">
 
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('game')" id="tabGame">🍯 Juego</button>
-    <button class="tab" onclick="switchTab('board')" id="tabBoard">🏆 Tabla</button>
+    <button class="tab-btn active" id="tabGame"  onclick="switchTab('Game')">🍯 Juego</button>
+    <button class="tab-btn"        id="tabBoard" onclick="switchTab('Board')">🏆 Tabla</button>
   </div>
 
-  <!-- GAME TAB -->
   <div class="tab-panel active" id="panelGame">
 
-    <!-- Score row -->
-    <div class="card" style="padding:16px 20px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div class="score-display">
-            <div class="score-number" id="myScore">0</div>
-            <div class="score-label">puntos</div>
-          </div>
-          <div class="rank-label" id="myRank">Principiante</div>
+    <div class="score-bar">
+      <div>
+        <div class="score-main">
+          <span class="score-num" id="myScore">0</span>
+          <span class="score-pts">puntos</span>
         </div>
-        <div style="text-align:right;">
-          <div style="font-size:0.82rem;color:var(--ink-light);">palabras</div>
-          <div style="font-size:1.4rem;font-weight:900;color:var(--ink);" id="myWordCount">0</div>
-        </div>
+        <div class="rank-txt" id="myRank">Principiante</div>
+      </div>
+      <div class="score-right">
+        <div class="wc-num" id="myWordCount">0</div>
+        <div class="wc-lbl">palabras</div>
       </div>
     </div>
 
-    <!-- Hive -->
-    <div class="hive-wrapper" id="hive"></div>
-
-    <!-- Word input display -->
-    <div class="input-area">
-      <div class="word-display" id="wordDisplay">
-        <span id="wordText"></span><span class="word-cursor"></span>
-      </div>
-      <div class="controls">
-        <button class="btn btn-ghost btn-sm" onclick="deleteLetter()">⌫ Borrar</button>
-        <button class="btn btn-ghost btn-sm" onclick="shuffleOuter()">🔀 Mezclar</button>
-        <button class="btn btn-primary btn-sm" onclick="submitWord()">Enviar ↵</button>
-      </div>
+    <div class="word-display" id="wordDisplay">
+      <span id="wordText"></span><span class="word-cursor"></span>
     </div>
 
-    <!-- Found words -->
-    <div class="card" style="padding:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div class="setup-label" style="margin:0;">Mis palabras</div>
-        <div style="font-size:0.8rem;color:var(--ink-light);" id="foundCountLabel">0 palabras</div>
+    <div class="hive-container">
+      <svg id="hiveSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-outline btn-sm" onclick="deleteLetter()">⌫ Borrar</button>
+      <button class="btn btn-outline btn-sm" onclick="shuffleOuter()">🔀 Mezclar</button>
+      <button class="btn btn-outline btn-sm" onclick="submitWord()">Enviar ↵</button>
+    </div>
+
+    <div class="found-section">
+      <div class="found-header">
+        <span class="found-header-lbl">Mis palabras</span>
+        <span class="found-count-lbl" id="foundCountLabel">0 palabras</span>
       </div>
       <div class="found-list" id="foundList">
-        <span style="color:var(--ink-light);font-size:0.85rem;">Aún no has encontrado ninguna palabra…</span>
+        <span class="found-empty">Aún no has encontrado ninguna palabra…</span>
       </div>
     </div>
 
-    <!-- Share row -->
-    <div class="card" style="padding:16px;">
-      <div class="setup-label">Invita a tus amigos</div>
-      <div class="share-box">
+    <div class="share-section">
+      <div class="field-label">Invita a tus amigos</div>
+      <div class="share-row">
         <input type="text" id="shareUrl" readonly>
-        <button class="btn btn-primary btn-sm" onclick="copyLink()">Copiar</button>
+        <button class="btn btn-outline btn-sm" onclick="copyLink()">Copiar</button>
       </div>
     </div>
 
-  </div><!-- /panelGame -->
-
-  <!-- LEADERBOARD TAB -->
-  <div class="tab-panel" id="panelBoard">
-    <div class="card" style="padding:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="setup-label" style="margin:0;">Clasificación en vivo</div>
-        <div style="display:flex;gap:4px;">
-          <div class="loading-dot" id="lbDot1"></div>
-          <div class="loading-dot" id="lbDot2"></div>
-          <div class="loading-dot" id="lbDot3"></div>
-        </div>
-      </div>
-      <div class="leaderboard-list" id="leaderboard">
-        <div class="lb-empty">Esperando jugadores…</div>
-      </div>
+  </div><div class="tab-panel" id="panelBoard">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="field-label" style="margin:0;">Clasificación en vivo</div>
+      <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
     </div>
-  </div><!-- /panelBoard -->
+    <div class="lb-list" id="leaderboard">
+      <div class="lb-empty">Esperando jugadores…</div>
+    </div>
+  </div>
 
-</div><!-- /screenGame -->
-
-<script>
-/* ═══════════════════════════════════════════════════════════════
-   FIREBASE CONFIG
-═══════════════════════════════════════════════════════════════ */
+</div></div><script>
+/* ══════════════════════════════════════════════
+   FIREBASE
+══════════════════════════════════════════════ */
 const firebaseConfig = {
   apiKey: "AIzaSyAHN9V1RUDVHskcDIu2YT9ZQFQvBIgE_UQ",
   authDomain: "spelling-bee-74a32.firebaseapp.com",
@@ -696,30 +500,29 @@ const firebaseConfig = {
   appId: "1:777716383565:web:7fecc869199c318ad74104",
   databaseURL: "https://spelling-bee-74a32-default-rtdb.firebaseio.com"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    STATE
-═══════════════════════════════════════════════════════════════ */
-let allWords      = [];  // full dictionary
-let puzzleLetters = [];  // 7 letters
+══════════════════════════════════════════════ */
+let allWords      = [];
+let puzzleLetters = [];
 let centerLetter  = '';
-let outerLetters  = [];  // 6 outer letters (shuffleable)
+let outerLetters  = [];
 let validAnswers  = new Set();
 let currentWord   = '';
 let foundWords    = new Set();
 let myScore       = 0;
 let myName        = '';
 let sessionId     = '';
-let isHost        = false;
 let dbRef         = null;
+let myPlayerId    = null;
 let wordsLoaded   = false;
 
-/* ═══════════════════════════════════════════════════════════════
-   WORD LIST LOADING
-═══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   WORD LOADING
+══════════════════════════════════════════════ */
 async function loadWords() {
   document.getElementById('loadingWords').style.display = 'block';
   try {
@@ -732,28 +535,21 @@ async function loadWords() {
   document.getElementById('loadingWords').style.display = 'none';
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    PUZZLE GENERATION
-═══════════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════ */
 function generatePuzzle() {
-  if (!wordsLoaded) return;
-
-  // Pick a random word with exactly 7 unique letters as the pangram seed
   const pangrams = allWords.filter(w => new Set(w).size === 7);
-  let attempts = 0;
-  while (attempts < 200) {
-    attempts++;
+  for (let attempt = 0; attempt < 300; attempt++) {
     const seed = pangrams[Math.floor(Math.random() * pangrams.length)];
     const letters = [...new Set(seed)].sort();
     const letterSet = new Set(letters);
-
-    // Try each letter as center
     for (const center of letters) {
       const answers = allWords.filter(w => {
         const s = new Set(w);
         return s.has(center) && [...s].every(c => letterSet.has(c));
       });
-      if (answers.length >= 20 && answers.length <= 800) {
+      if (answers.length >= 20 && answers.length <= 700) {
         return { letters, center, answers };
       }
     }
@@ -777,94 +573,70 @@ function regeneratePuzzle() {
 }
 
 function renderPreview() {
-  const container = document.getElementById('previewLetters');
-  container.innerHTML = '';
+  const c = document.getElementById('previewLetters');
+  c.innerHTML = '';
   for (const l of puzzleLetters) {
     const chip = document.createElement('div');
-    chip.className = 'letter-chip' + (l === centerLetter ? ' center-chip' : '');
+    chip.className = 'letter-chip' + (l === centerLetter ? ' is-center' : '');
     chip.textContent = l.toUpperCase();
-    container.appendChild(chip);
+    c.appendChild(chip);
   }
   document.getElementById('previewCount').textContent = validAnswers.size;
-  // Find a pangram to show
-  const pangram = [...validAnswers].find(w => new Set(w).size === 7);
-  document.getElementById('previewPangram').textContent = pangram
-    ? pangram.toUpperCase()
-    : '(ninguno encontrado)';
+  const pg = [...validAnswers].find(w => new Set(w).size === 7);
+  document.getElementById('previewPangram').textContent = pg ? pg.toUpperCase() : '–';
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   NAVIGATION
-═══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   NAV
+══════════════════════════════════════════════ */
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-
 function goHome() { showScreen('screenHome'); }
 
 function showCreatePuzzle() {
   showScreen('screenCreate');
-  if (!wordsLoaded) {
-    loadWords().then(() => regeneratePuzzle());
-  } else {
-    regeneratePuzzle();
-  }
+  if (!wordsLoaded) loadWords().then(() => regeneratePuzzle());
+  else regeneratePuzzle();
 }
 
-function showJoinPuzzle() {
-  // Check URL for code
+function showJoinScreen() {
   const params = new URLSearchParams(window.location.search);
   const code = params.get('game');
   if (code) document.getElementById('joinCode').value = code.toUpperCase();
   showScreen('screenJoin');
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   HOST FLOW
-═══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   HOST / JOIN
+══════════════════════════════════════════════ */
 async function startAsHost() {
   const name = document.getElementById('createName').value.trim();
-  if (!name) { showToast('Escribe tu nombre', 'error'); return; }
-  if (!puzzleLetters.length) { showToast('Genera un panal primero', 'error'); return; }
-
-  myName  = name;
-  isHost  = true;
-  // Encode puzzle in session ID: letters + center (compact)
-  // Format: 7letters_center  e.g. "abcdefg_c"
-  const code = puzzleLetters.join('') + '_' + centerLetter;
-  sessionId   = code;
-
+  if (!name)               { showToast('Escribe tu nombre', 'error'); return; }
+  if (!puzzleLetters.length){ showToast('Genera un panal primero', 'error'); return; }
+  myName    = name;
+  sessionId = puzzleLetters.join('') + '_' + centerLetter;
   await initFirebase();
   startGame();
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   JOIN FLOW
-═══════════════════════════════════════════════════════════════ */
 async function joinGame() {
   const rawCode = document.getElementById('joinCode').value.trim().toLowerCase();
   const name    = document.getElementById('joinName').value.trim();
   if (!rawCode) { showToast('Escribe el código', 'error'); return; }
   if (!name)    { showToast('Escribe tu nombre', 'error'); return; }
 
-  // Parse code: 7letters_center
   const parts = rawCode.split('_');
   if (parts.length !== 2 || parts[0].length !== 7 || parts[1].length !== 1) {
-    showToast('Código inválido', 'error');
-    return;
+    showToast('Código inválido', 'error'); return;
   }
-
   const letters = [...new Set(parts[0])].sort();
   const center  = parts[1];
   if (!letters.includes(center)) { showToast('Código inválido', 'error'); return; }
 
-  if (!wordsLoaded) {
-    showToast('Cargando diccionario…', '');
-    await loadWords();
-  }
+  if (!wordsLoaded) { showToast('Cargando diccionario…', ''); await loadWords(); }
 
-  // Compute valid answers from the word list
   const letterSet = new Set(letters);
   const answers = allWords.filter(w => {
     const s = new Set(w);
@@ -874,179 +646,177 @@ async function joinGame() {
   applyPuzzle({ letters, center, answers });
   myName    = name;
   sessionId = rawCode;
-  isHost    = false;
-
   await initFirebase();
   startGame();
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    FIREBASE SYNC
-═══════════════════════════════════════════════════════════════ */
-let myPlayerId = null;
-
+══════════════════════════════════════════════ */
 async function initFirebase() {
-  myPlayerId = 'player_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  myPlayerId = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
   dbRef = db.ref('games/' + sessionId + '/players/' + myPlayerId);
   await dbRef.set({ name: myName, score: 0, words: 0 });
-
-  // Remove on disconnect
   dbRef.onDisconnect().remove();
-
-  // Listen to all players for leaderboard
   db.ref('games/' + sessionId + '/players').on('value', snap => {
-    const data = snap.val() || {};
-    renderLeaderboard(data);
+    renderLeaderboard(snap.val() || {});
   });
 }
 
 function pushScore() {
-  if (!dbRef) return;
-  dbRef.update({ score: myScore, words: foundWords.size });
+  if (dbRef) dbRef.update({ score: myScore, words: foundWords.size });
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   GAME
-═══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   START GAME
+══════════════════════════════════════════════ */
 function startGame() {
-  currentWord = '';
-  foundWords  = new Set();
-  myScore     = 0;
-
-  // Build share URL
-  const url = window.location.origin + window.location.pathname + '?game=' + encodeURIComponent(sessionId.toUpperCase());
+  currentWord = ''; foundWords = new Set(); myScore = 0;
+  const url = location.origin + location.pathname + '?game=' + encodeURIComponent(sessionId.toUpperCase());
   document.getElementById('shareUrl').value = url;
-
   showScreen('screenGame');
   renderHive();
   updateScoreDisplay();
   renderFoundWords();
-  switchTab('game');
-
-  // Keyboard support
+  switchTab('Game');
   document.addEventListener('keydown', handleKey);
 }
 
-/* ── Hive rendering ── */
-// Layout: row of 3, row of 4, row of 3 but with center in middle of row of 3 center
-// Classic NYT layout: top-row 2, middle-row 3, bottom-row 2 for 7 hexes
-// Actually: row1=[outer0,outer1], row2=[outer2,center,outer3], row3=[outer4,outer5]
-function renderHive() {
-  const hive = document.getElementById('hive');
-  hive.innerHTML = '';
+/* ══════════════════════════════════════════════
+   HONEYCOMB — Adjusted Math & Alignment
+══════════════════════════════════════════════ */
 
-  const layout = [
-    [outerLetters[0], outerLetters[1]],
-    [outerLetters[2], centerLetter,    outerLetters[3]],
-    [outerLetters[4], outerLetters[5]],
+const S   = 46;                // hex radius center-to-vertex
+const GAP = 3;                 // visual padding to shrink polygon
+const W   = S * Math.sqrt(3);  // flat-to-flat width
+const H   = S * 2;             // vertex-to-vertex height
+const COL = W;                 // horizontal step
+const ROW = H * 0.75;          // vertical step
+
+function hexPositions() {
+  const cx = 160, cy = 150;
+  return [
+    { x: cx - COL/2,       y: cy - ROW },       // 0: Top Left
+    { x: cx + COL/2,       y: cy - ROW },       // 1: Top Right
+    { x: cx - COL,         y: cy       },       // 2: Mid Left
+    { x: cx,               y: cy       },       // 3: CENTER
+    { x: cx + COL,         y: cy       },       // 4: Mid Right
+    { x: cx - COL/2,       y: cy + ROW },       // 5: Bot Left
+    { x: cx + COL/2,       y: cy + ROW },       // 6: Bot Right
+  ];
+}
+
+function hexPoints(cx, cy, r) {
+  return Array.from({length:6}, (_,i) => {
+    const a = Math.PI/180 * (60*i - 90);
+    return `${cx + r*Math.cos(a)},${cy + r*Math.sin(a)}`;
+  }).join(' ');
+}
+
+function renderHive() {
+  const svg = document.getElementById('hiveSvg');
+  svg.innerHTML = '';
+
+  const positions = hexPositions();
+  const letters = [
+    outerLetters[0], outerLetters[1],
+    outerLetters[2], centerLetter, outerLetters[3],
+    outerLetters[4], outerLetters[5]
   ];
 
-  const OFFSET = 36; // px half-shift for hex rows
+  const svgW = 320, svgH = 300;
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+  svg.setAttribute('width',  svgW);
+  svg.setAttribute('height', svgH);
 
-  layout.forEach((row, ri) => {
-    const rowEl = document.createElement('div');
-    rowEl.className = 'hive-row';
-    rowEl.style.marginTop = ri === 0 ? '0' : '-18px';
+  positions.forEach((pos, i) => {
+    const letter   = letters[i];
+    const isCenter = letter === centerLetter;
 
-    if (row.length === 2) rowEl.style.marginLeft = OFFSET + 'px';
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.classList.add('hex-cell');
+    g.setAttribute('role', 'button');
+    g.setAttribute('tabindex', '0');
+    g.addEventListener('click', () => typeLetter(letter));
 
-    row.forEach(letter => {
-      const btn = document.createElement('button');
-      btn.className = 'hex-btn' + (letter === centerLetter ? ' center' : '');
-      btn.dataset.letter = letter;
-      btn.onclick = () => typeLetter(letter);
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    // We pass S-GAP to draw them slightly smaller, leaving perfect negative space
+    poly.setAttribute('points', hexPoints(pos.x, pos.y, S - GAP));
+    poly.setAttribute('fill',   isCenter ? 'var(--yellow)' : 'var(--grey-hex)');
+    // Removed borders entirely for the clean look
 
-      // SVG hexagon
-      const fill = letter === centerLetter ? '#F5A623' : '#FDF6E3';
-      const stroke = letter === centerLetter ? '#D4831A' : '#D4C89A';
-      btn.innerHTML = `
-        <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="40,6 74,22 74,58 40,74 6,58 6,22"
-            fill="${fill}" stroke="${stroke}" stroke-width="2.5"/>
-        </svg>
-        <span class="hex-letter">${letter.toUpperCase()}</span>`;
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.classList.add('hex-letter');
+    text.setAttribute('x', pos.x);
+    text.setAttribute('y', pos.y);
+    // Setting dy to 0.35em perfectly centers standard text vertically in SVG
+    text.setAttribute('dy', '0.35em'); 
+    text.setAttribute('fill', '#111111');
+    text.textContent = letter.toUpperCase();
 
-      rowEl.appendChild(btn);
-    });
-
-    hive.appendChild(rowEl);
+    g.appendChild(poly);
+    g.appendChild(text);
+    svg.appendChild(g);
   });
 }
 
-/* ── Input ── */
+/* ══════════════════════════════════════════════
+   INPUT
+══════════════════════════════════════════════ */
 function typeLetter(l) {
   currentWord += l;
-  updateWordDisplay();
-}
-
-function deleteLetter() {
-  currentWord = currentWord.slice(0, -1);
-  updateWordDisplay();
-}
-
-function updateWordDisplay() {
   document.getElementById('wordText').textContent = currentWord.toUpperCase();
 }
-
+function deleteLetter() {
+  currentWord = currentWord.slice(0,-1);
+  document.getElementById('wordText').textContent = currentWord.toUpperCase();
+}
 function shuffleOuter() {
-  for (let i = outerLetters.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [outerLetters[i], outerLetters[j]] = [outerLetters[j], outerLetters[i]];
+  for (let i = outerLetters.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [outerLetters[i],outerLetters[j]] = [outerLetters[j],outerLetters[i]];
   }
   renderHive();
 }
-
 function handleKey(e) {
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key === 'Enter')     { submitWord(); return; }
-  if (e.key === 'Backspace') { deleteLetter(); return; }
+  if (e.ctrlKey||e.metaKey||e.altKey) return;
+  if (e.key==='Enter')     { submitWord(); return; }
+  if (e.key==='Backspace') { deleteLetter(); return; }
   if (/^[a-zA-Z]$/.test(e.key)) {
     const l = e.key.toLowerCase();
     if (puzzleLetters.includes(l)) typeLetter(l);
   }
 }
 
-/* ── Submission ── */
+/* ══════════════════════════════════════════════
+   SUBMIT
+══════════════════════════════════════════════ */
 function submitWord() {
   const word = currentWord.toLowerCase();
   currentWord = '';
-  updateWordDisplay();
+  document.getElementById('wordText').textContent = '';
 
-  if (word.length < 4) {
-    flashWord('¡Muy corta!', 'shake'); return;
-  }
-  if (!word.includes(centerLetter)) {
-    flashWord('Falta la letra central', 'shake'); return;
-  }
-  if (foundWords.has(word)) {
-    flashWord('¡Ya la encontraste!', 'shake'); return;
-  }
-  if (!validAnswers.has(word)) {
-    flashWord('No está en la lista', 'shake'); return;
-  }
+  if (word.length < 4)          { flashWord('¡Muy corta!',          'shake'); return; }
+  if (!word.includes(centerLetter)) { flashWord('Falta la letra central', 'shake'); return; }
+  if (foundWords.has(word))     { flashWord('¡Ya la encontraste!',  'shake'); return; }
+  if (!validAnswers.has(word))  { flashWord('No está en la lista',  'shake'); return; }
 
-  // Valid word!
   foundWords.add(word);
-  const pts = calcPoints(word);
+  const pts       = calcPoints(word);
+  const isPangram = new Set(word).size === 7;
   myScore += pts;
 
-  const isPangram = new Set(word).size === 7;
-  const msg = isPangram
-    ? `🌟 ¡PANGRAMA! +${pts}`
-    : pts === 1 ? '¡Bien! +1' : `¡Genial! +${pts}`;
-
   flashWord(word.toUpperCase(), 'bounce');
-  showToast(msg, isPangram ? '' : 'success');
+  showToast(isPangram ? `🌟 ¡PANGRAMA! +${pts}` : (pts===1?'¡Bien! +1':`¡Genial! +${pts}`),
+            isPangram ? 'pangram' : 'success');
   updateScoreDisplay();
   renderFoundWords();
   pushScore();
 }
 
-function calcPoints(word) {
-  if (word.length === 4) return 1;
-  const base = word.length;
-  const isPangram = new Set(word).size === 7;
-  return isPangram ? base + 7 : base;
+function calcPoints(w) {
+  if (w.length===4) return 1;
+  return new Set(w).size===7 ? w.length+7 : w.length;
 }
 
 function flashWord(text, cls) {
@@ -1054,136 +824,104 @@ function flashWord(text, cls) {
   const wt = document.getElementById('wordText');
   wt.textContent = text;
   el.classList.add(cls);
-  setTimeout(() => {
-    el.classList.remove(cls);
-    wt.textContent = currentWord.toUpperCase();
-  }, 500);
+  setTimeout(() => { el.classList.remove(cls); wt.textContent = currentWord.toUpperCase(); }, 600);
 }
 
-/* ── Score display ── */
-const RANKS = [
-  [0,   'Principiante'],
-  [5,   'Aprendiz'],
-  [15,  'Bueno'],
-  [30,  'Hábil'],
-  [60,  'Brillante'],
-  [100, '¡Experto!'],
-  [150, '🌟 Maestro'],
-];
+/* ══════════════════════════════════════════════
+   SCORE
+══════════════════════════════════════════════ */
+const RANKS = [[0,'Principiante'],[5,'Aprendiz'],[15,'Bueno'],[30,'Hábil'],[60,'Brillante'],[100,'¡Experto!'],[150,'🌟 Maestro']];
 
 function updateScoreDisplay() {
-  document.getElementById('myScore').textContent = myScore;
+  document.getElementById('myScore').textContent     = myScore;
   document.getElementById('myWordCount').textContent = foundWords.size;
-
   let rank = RANKS[0][1];
-  for (const [threshold, label] of RANKS) {
-    if (myScore >= threshold) rank = label;
-  }
+  for (const [t,l] of RANKS) if (myScore>=t) rank=l;
   document.getElementById('myRank').textContent = rank;
-
-  const label = foundWords.size === 1 ? '1 palabra' : `${foundWords.size} palabras`;
-  document.getElementById('foundCountLabel').textContent = label;
+  document.getElementById('foundCountLabel').textContent =
+    foundWords.size===1 ? '1 palabra' : `${foundWords.size} palabras`;
 }
 
-/* ── Found words list ── */
 function renderFoundWords() {
   const list = document.getElementById('foundList');
-  if (foundWords.size === 0) {
-    list.innerHTML = '<span style="color:var(--ink-light);font-size:0.85rem;">Aún no has encontrado ninguna palabra…</span>';
+  if (!foundWords.size) {
+    list.innerHTML = '<span class="found-empty">Aún no has encontrado ninguna palabra…</span>';
     return;
   }
   list.innerHTML = '';
-  const sorted = [...foundWords].sort();
-  for (const w of sorted) {
+  for (const w of [...foundWords].sort()) {
     const chip = document.createElement('span');
-    chip.className = 'found-word';
+    chip.className = 'found-word' + (new Set(w).size===7 ? ' pangram' : '');
     chip.textContent = w.toUpperCase();
-    if (new Set(w).size === 7) chip.style.borderColor = '#F5A623';
     list.appendChild(chip);
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    LEADERBOARD
-═══════════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════ */
 function renderLeaderboard(data) {
   const list = document.getElementById('leaderboard');
+  const players = Object.entries(data)
+    .map(([id,p]) => ({id, name:p.name||'?', score:p.score||0, words:p.words||0}))
+    .sort((a,b) => b.score-a.score || b.words-a.words);
 
-  const players = Object.entries(data).map(([id, p]) => ({
-    id, name: p.name || '?', score: p.score || 0, words: p.words || 0
-  }));
+  if (!players.length) { list.innerHTML='<div class="lb-empty">Esperando jugadores…</div>'; return; }
 
-  players.sort((a, b) => b.score - a.score || b.words - a.words);
-
-  if (players.length === 0) {
-    list.innerHTML = '<div class="lb-empty">Esperando jugadores…</div>';
-    return;
-  }
-
-  list.innerHTML = '';
   const medals = ['🥇','🥈','🥉'];
-
-  players.forEach((p, i) => {
+  list.innerHTML = '';
+  players.forEach((p,i) => {
     const row = document.createElement('div');
-    row.className = 'lb-row' + (p.id === myPlayerId ? ' me' : '');
-
-    const rankStr = i < 3 ? medals[i] : `${i+1}`;
-    const isTop   = i < 3;
-
+    row.className = 'lb-row' + (p.id===myPlayerId?' me':'');
     row.innerHTML = `
-      <div class="lb-rank ${isTop ? 'top' : ''}">${rankStr}</div>
-      <div class="lb-name">${escHtml(p.name)}${p.id === myPlayerId ? ' <span style="color:var(--honey-dark);font-size:0.75rem;">(tú)</span>' : ''}</div>
+      <div class="lb-rank">${i<3?medals[i]:i+1}</div>
+      <div class="lb-name">${esc(p.name)}${p.id===myPlayerId?' <span style="color:#888;font-size:.72rem;">(tú)</span>':''}</div>
       <div class="lb-words">${p.words} pal.</div>
       <div class="lb-score">${p.score} pts</div>`;
-
     list.appendChild(row);
   });
 }
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-/* ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    TABS
-═══════════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════ */
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-  document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  ['Game','Board'].forEach(t => {
+    document.getElementById('tab'+t).classList.toggle('active', t===tab);
+    document.getElementById('panel'+t).classList.toggle('active', t===tab);
+  });
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════
    UTILS
-═══════════════════════════════════════════════════════════════ */
-let toastTimer = null;
-function showToast(msg, type) {
+══════════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg, type='') {
   const el = document.getElementById('toast');
-  el.textContent  = msg;
-  el.className    = 'show' + (type ? ' ' + type : '');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ' '+type : '');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.className = '', 2200);
+  toastTimer = setTimeout(() => el.className='', 2400);
 }
 
 function copyLink() {
-  const url = document.getElementById('shareUrl').value;
-  navigator.clipboard.writeText(url).then(() => showToast('¡Enlace copiado!', 'success'));
+  navigator.clipboard.writeText(document.getElementById('shareUrl').value)
+    .then(() => showToast('¡Enlace copiado!','success'));
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   INIT — check URL for game code
-═══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  const code   = params.get('game');
+  const code = new URLSearchParams(location.search).get('game');
   if (code) {
-    // Auto-navigate to join screen
-    loadWords(); // start loading in background
+    loadWords();
     showScreen('screenJoin');
     document.getElementById('joinCode').value = code.toUpperCase();
   } else {
-    loadWords(); // preload in background
+    loadWords();
   }
 });
 </script>
