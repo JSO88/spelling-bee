@@ -1,3 +1,14 @@
+This is a fantastic upgrade. Shifting to a blind lobby format prevents the host from getting a head start and makes the whole experience much more competitive.
+
+To achieve this, I completely redesigned the flow.
+
+1. **The Game Code:** Instead of using the puzzle letters as the code (which gives the game away), the app now generates a random 6-character alphanumeric code (e.g., `X7K9P2`).
+2. **The Lobby:** When you create or join a game, you enter a "Sala de Espera" (Lobby). The puzzle is generated silently in the background and synced to Firebase, but the UI strictly hides it.
+3. **The Countdown:** The host gets a "Start Game" button. Clicking it triggers a synchronized Firebase event that fires a 3-second visual countdown for everyone in the lobby before revealing the game board.
+
+Here is the fully updated, copy-pasteable `index.html`:
+
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -9,7 +20,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <style>
-/* ── Palette (NYT-inspired: Strictly White, Grey, Yellow, Black) ── */
+/* ── Palette (Strictly White, Grey, Yellow, Black) ── */
 :root {
   --yellow:      #F7DA21;
   --yellow-dark: #D4B914;
@@ -52,13 +63,7 @@ header {
   z-index: 100;
 }
 
-.logo {
-  font-size: 1.25rem;
-  font-weight: 900;
-  letter-spacing: -0.3px;
-  color: var(--ink);
-}
-
+.logo { font-size: 1.25rem; font-weight: 900; letter-spacing: -0.3px; color: var(--ink); }
 .logo span { color: var(--ink-light); font-weight: 400; }
 
 /* ── Screens ── */
@@ -95,129 +100,67 @@ input[type="text"] {
 }
 input[type="text"]:focus { border-color: var(--ink); }
 
-/* ── Divider ── */
-.divider { width: 100%; height: 1px; background: var(--divider); }
+/* ── Common UI Elements ── */
+.screen-title { width: 100%; display: flex; align-items: center; gap: 12px; font-size: 1.1rem; font-weight: 800; }
+.field-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-mid); margin-bottom: 7px; }
+.field-block { width: 100%; }
 
 /* ── Home screen ── */
-.home-hero {
-  text-align: center;
-  padding: 16px 0 8px;
-}
+.home-hero { text-align: center; padding: 16px 0 8px; }
 .home-hero h1 { font-size: 2rem; font-weight: 900; letter-spacing: -0.5px; }
 .home-hero p  { color: var(--ink-mid); margin-top: 8px; font-size: 0.92rem; line-height: 1.5; }
 
 .choice-list { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-
 .choice-btn {
   width: 100%; padding: 16px 18px;
   border: 1px solid var(--grey-border); border-radius: var(--radius);
   background: var(--white); cursor: pointer; text-align: left;
-  transition: border-color 0.18s, background 0.18s;
-  font-family: inherit; color: var(--ink);
+  transition: border-color 0.18s, background 0.18s; font-family: inherit; color: var(--ink);
 }
 .choice-btn:hover { border-color: var(--ink); background: #fafafa; }
 .choice-btn .ct { font-weight: 700; font-size: 0.95rem; }
 .choice-btn .cd { font-size: 0.8rem; color: var(--ink-light); margin-top: 3px; }
 
-/* ── Create / Join screens ── */
-.screen-title {
-  width: 100%; display: flex; align-items: center; gap: 12px;
-  font-size: 1.1rem; font-weight: 800;
+/* ── Lobby Screen ── */
+.code-display {
+  font-size: 2.5rem; font-weight: 900; letter-spacing: 5px;
+  margin: 10px 0 20px; padding: 15px; background: var(--grey-hex);
+  border-radius: var(--radius); text-align: center; width: 100%;
 }
-
-.field-label {
-  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.6px; color: var(--ink-mid); margin-bottom: 7px;
+.player-list {
+  width: 100%; border: 1px solid var(--grey-border); border-radius: var(--radius);
+  padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; text-align: left;
 }
+.player-item { padding: 8px; border-bottom: 1px solid var(--divider); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.player-item:last-child { border-bottom: none; }
+.host-badge { background: var(--yellow); font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; color: var(--ink); }
 
-.field-block { width: 100%; }
-
-.puzzle-preview {
-  width: 100%;
-  border: 1px solid var(--grey-border);
-  border-radius: var(--radius);
-  padding: 18px;
+/* ── Countdown Overlay ── */
+#countdownOverlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(255,255,255,0.95); z-index: 9999;
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; text-align: center;
 }
-
-.preview-letters {
-  display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px;
-}
-
-.letter-chip {
-  width: 34px; height: 34px; border-radius: 6px;
-  background: var(--grey-hex); border: 1px solid transparent;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 0.95rem; text-transform: uppercase;
-}
-.letter-chip.is-center { background: var(--yellow); }
-
-.meta-row {
-  display: flex; justify-content: space-between;
-  font-size: 0.82rem; color: var(--ink-mid);
-  padding: 5px 0; border-top: 1px solid var(--divider);
-}
-.meta-row strong { color: var(--ink); font-weight: 700; }
-
-.btn-row { display: flex; gap: 10px; width: 100%; }
-.btn-row .btn { flex: 1; }
-
-/* ══════════════════════════════════════
-   HONEYCOMB  — pure SVG, pixel-perfect
-══════════════════════════════════════ */
-.hive-container {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 12px 0 4px;
-  user-select: none;
-}
-
-#hiveSvg {
-  overflow: visible;
-}
-
-.hex-cell { cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
-.hex-cell polygon { transition: transform 0.1s; transform-origin: center; }
-.hex-cell:active polygon { transform: scale(0.95); }
-.hex-cell .hex-letter {
-  font-size: 1.25rem;
-  font-weight: 700;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  text-transform: uppercase;
-  text-anchor: middle;
-  pointer-events: none;
-}
+#countdownOverlay.active { display: flex; }
+#countdownOverlay h2 { font-size: 7rem; font-weight: 900; color: var(--ink); animation: pop 1s infinite; margin-top: 10px; }
+@keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 30% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.9); opacity: 0; } }
 
 /* ── Game screen ── */
 #screenGame .screen-inner {
-  width: 100%; max-width: 500px;
-  display: flex; flex-direction: column; align-items: center; gap: 0;
-  padding: 0 20px 28px;
+  width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 0 20px 28px;
 }
-
-/* Tabs */
-.tabs {
-  display: flex; width: 100%;
-  border-bottom: 1px solid var(--divider);
-  margin-bottom: 0;
-}
+.tabs { display: flex; width: 100%; border-bottom: 1px solid var(--divider); margin-bottom: 0; }
 .tab-btn {
-  flex: 1; padding: 14px 0; border: none; background: none;
-  font-family: inherit; font-size: 0.85rem; font-weight: 700;
-  color: var(--ink-light); cursor: pointer; border-bottom: 3px solid transparent;
-  transition: color 0.15s, border-color 0.15s; margin-bottom: -1px;
+  flex: 1; padding: 14px 0; border: none; background: none; font-family: inherit; font-size: 0.85rem; font-weight: 700;
+  color: var(--ink-light); cursor: pointer; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; margin-bottom: -1px;
 }
 .tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
-
 .tab-panel { display: none; width: 100%; padding-top: 20px; }
 .tab-panel.active { display: block; }
 
-/* Score bar */
-.score-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  width: 100%; padding: 12px 0 16px;
-}
+/* Score bar & UI */
+.score-bar { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 0 16px; }
 .score-main { display: flex; align-items: baseline; gap: 5px; }
 .score-num  { font-size: 2rem; font-weight: 900; line-height: 1; }
 .score-pts  { font-size: 0.8rem; color: var(--ink-light); font-weight: 600; }
@@ -226,86 +169,40 @@ input[type="text"]:focus { border-color: var(--ink); }
 .wc-num { font-size: 1.5rem; font-weight: 900; }
 .wc-lbl { font-size: 0.75rem; color: var(--ink-light); }
 
-/* Word display */
-.word-display {
-  font-size: 1.7rem; font-weight: 700; letter-spacing: 2px;
-  text-transform: uppercase; text-align: center;
-  min-height: 2.4rem; color: var(--ink);
-  display: flex; align-items: center; justify-content: center;
-  padding: 8px 0 4px; width: 100%;
-}
-/* Removed red and green completely from word animations */
+.word-display { font-size: 1.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-align: center; min-height: 2.4rem; color: var(--ink); display: flex; align-items: center; justify-content: center; padding: 8px 0 4px; width: 100%; }
 .word-display.shake { animation: shake 0.35s; color: var(--ink-light); }
 .word-display.bounce { animation: bounceIn 0.3s; color: var(--ink); }
-
-@keyframes shake {
-  0%,100%{ transform:translateX(0) }
-  20%{ transform:translateX(-6px) }
-  40%{ transform:translateX(6px) }
-  60%{ transform:translateX(-4px) }
-  80%{ transform:translateX(4px) }
-}
-@keyframes bounceIn {
-  0%{ transform:scale(.85) }
-  60%{ transform:scale(1.1) }
-  100%{ transform:scale(1) }
-}
-
-.word-cursor {
-  display: inline-block; width: 2px; height: 1.5rem;
-  background: var(--yellow); animation: blink 1s step-end infinite;
-  vertical-align: middle; margin-left: 3px;
-}
+@keyframes shake { 0%,100%{ transform:translateX(0) } 20%{ transform:translateX(-6px) } 40%{ transform:translateX(6px) } 60%{ transform:translateX(-4px) } 80%{ transform:translateX(4px) } }
+@keyframes bounceIn { 0%{ transform:scale(.85) } 60%{ transform:scale(1.1) } 100%{ transform:scale(1) } }
+.word-cursor { display: inline-block; width: 2px; height: 1.5rem; background: var(--yellow); animation: blink 1s step-end infinite; vertical-align: middle; margin-left: 3px; }
 @keyframes blink { 50%{ opacity:0 } }
 
-/* Action buttons */
-.action-row {
-  display: flex; gap: 10px; justify-content: center;
-  width: 100%; margin: 10px 0 4px;
-  flex-wrap: wrap;
-}
+/* SVG Honeycomb */
+.hive-container { width: 100%; display: flex; justify-content: center; align-items: center; padding: 12px 0 4px; user-select: none; }
+#hiveSvg { overflow: visible; }
+.hex-cell { cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+.hex-cell polygon { transition: transform 0.1s; transform-origin: center; }
+.hex-cell:active polygon { transform: scale(0.95); }
+.hex-cell .hex-letter { font-size: 1.25rem; font-weight: 700; font-family: 'Helvetica Neue', Arial, sans-serif; text-transform: uppercase; text-anchor: middle; pointer-events: none; }
 
-/* Found words */
+.action-row { display: flex; gap: 10px; justify-content: center; width: 100%; margin: 10px 0 4px; flex-wrap: wrap; }
 .found-section { width: 100%; margin-top: 18px; }
-.found-header  {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 10px;
-}
+.found-header  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .found-header-lbl { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-mid); }
 .found-count-lbl  { font-size: 0.8rem; color: var(--ink-light); }
-
-.found-list {
-  display: flex; flex-wrap: wrap; gap: 7px;
-  min-height: 36px;
-}
-.found-word {
-  border: 1px solid var(--grey-border); border-radius: 50px;
-  padding: 5px 13px; font-size: 0.8rem; font-weight: 700; color: var(--ink-mid);
-  text-transform: uppercase; letter-spacing: 0.5px;
-  animation: popIn 0.2s ease; background: var(--white);
-}
-.found-word.pangram {
-  background: var(--yellow); color: var(--ink); border-color: transparent;
-}
+.found-list { display: flex; flex-wrap: wrap; gap: 7px; min-height: 36px; }
+.found-word { border: 1px solid var(--grey-border); border-radius: 50px; padding: 5px 13px; font-size: 0.8rem; font-weight: 700; color: var(--ink-mid); text-transform: uppercase; letter-spacing: 0.5px; animation: popIn 0.2s ease; background: var(--white); }
+.found-word.pangram { background: var(--yellow); color: var(--ink); border-color: transparent; }
 .found-empty { font-size: 0.85rem; color: var(--ink-light); padding: 6px 0; }
+@keyframes popIn { from{ transform:scale(0); opacity:0 } to{ transform:scale(1); opacity:1 } }
 
-@keyframes popIn {
-  from{ transform:scale(0); opacity:0 }
-  to{ transform:scale(1); opacity:1 }
-}
-
-/* Share */
+/* Share & Leaderboard */
 .share-section { width: 100%; margin-top: 20px; }
 .share-row { display: flex; gap: 8px; margin-top: 8px; }
 .share-row input { flex: 1; font-size: 0.78rem; padding: 10px 14px; }
 
-/* ── Leaderboard ── */
 .lb-list { width: 100%; }
-.lb-row {
-  display: flex; align-items: center;
-  padding: 11px 8px; gap: 12px;
-  border-bottom: 1px solid var(--divider);
-}
+.lb-row { display: flex; align-items: center; padding: 11px 8px; gap: 12px; border-bottom: 1px solid var(--divider); }
 .lb-row:last-child { border-bottom: none; }
 .lb-row.me { background: #fafafa; border-radius: var(--radius); }
 .lb-rank  { width: 28px; font-size: 0.85rem; font-weight: 800; color: var(--ink-mid); text-align: center; flex-shrink:0; }
@@ -314,39 +211,31 @@ input[type="text"]:focus { border-color: var(--ink); }
 .lb-score { font-weight: 800; font-size: 0.95rem; flex-shrink:0; min-width:48px; text-align:right; }
 .lb-empty { text-align:center; color:var(--ink-light); font-size:0.88rem; padding:24px 0; }
 
-/* ── Toast ── */
-#toast {
-  position: fixed; top: 64px; left: 50%;
-  transform: translateX(-50%) translateY(-12px);
-  background: var(--ink); color: var(--white);
-  padding: 10px 20px; border-radius: 50px;
-  font-weight: 700; font-size: 0.85rem;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.18s, transform 0.18s;
-  z-index: 9999; white-space: nowrap;
-  box-shadow: 0 4px 12px var(--shadow);
-}
+/* Toast & Loading */
+#toast { position: fixed; top: 64px; left: 50%; transform: translateX(-50%) translateY(-12px); background: var(--ink); color: var(--white); padding: 10px 20px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.18s; z-index: 9999; white-space: nowrap; box-shadow: 0 4px 12px var(--shadow); }
 #toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
-/* All success/pangrams are now purely yellow and black, errors are black and white */
 #toast.success { background: var(--yellow); color: var(--ink); }
 #toast.error   { background: var(--ink); color: var(--white); }
 #toast.pangram { background: var(--yellow); color: var(--ink); }
 
-/* Loading dots */
 .dots { display:flex; gap:5px; justify-content:center; }
 .dot  { width:7px; height:7px; border-radius:50%; background:var(--ink-light); animation:pulse 1.2s ease-in-out infinite; }
 .dot:nth-child(2){ animation-delay:.2s }
 .dot:nth-child(3){ animation-delay:.4s }
 @keyframes pulse { 0%,80%,100%{transform:scale(0)} 40%{transform:scale(1)} }
 
-@media(max-width:400px){
-  #hiveSvg { transform-origin: center; }
-}
+@media(max-width:400px){ #hiveSvg { transform-origin: center; } }
 </style>
 </head>
 <body>
 
 <div id="toast"></div>
+
+<div id="countdownOverlay">
+  <div style="font-size:1.5rem;font-weight:700;margin-bottom:10px;">¡Prepárate!</div>
+  <p style="color:var(--ink-mid);">Revelando el panal en...</p>
+  <h2 id="countdownNumber">3</h2>
+</div>
 
 <header>
   <div class="logo">Panal <span>de Letras</span></div>
@@ -358,85 +247,77 @@ input[type="text"]:focus { border-color: var(--ink); }
     <h1>Panal de Letras</h1>
     <p>Forma palabras usando las letras del panal.<br>¡La letra <strong>amarilla</strong> siempre debe estar incluida!</p>
   </div>
-
   <div class="choice-list">
-    <button class="choice-btn" onclick="showCreatePuzzle()">
+    <button class="choice-btn" onclick="showCreateScreen()">
       <div class="ct">🎲 Crear partida</div>
-      <div class="cd">Genera un panal y comparte el enlace con tus amigos</div>
+      <div class="cd">Genera un panal oculto e invita a tus amigos</div>
     </button>
     <button class="choice-btn" onclick="showJoinScreen()">
       <div class="ct">🔗 Unirse con código</div>
-      <div class="cd">Escribe el código que te compartieron</div>
+      <div class="cd">Ingresa a una sala de espera existente</div>
     </button>
   </div>
-
   <div id="loadingWords" style="display:none;text-align:center;color:var(--ink-light);font-size:0.85rem;">
-    <div class="dots" style="margin-bottom:8px;">
-      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-    </div>
+    <div class="dots" style="margin-bottom:8px;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
     Cargando diccionario…
   </div>
 </div>
 
 <div id="screenCreate" class="screen">
-  <div class="screen-title">
-    <button class="btn btn-outline btn-sm" onclick="goHome()">← Atrás</button>
-    Crear partida
-  </div>
-
-  <div class="puzzle-preview">
-    <div class="field-label">Letras del panal</div>
-    <div class="preview-letters" id="previewLetters"></div>
-    <div class="meta-row"><span>Palabras válidas</span><strong id="previewCount">–</strong></div>
-    <div class="meta-row"><span>Pangrama</span><strong id="previewPangram">–</strong></div>
-  </div>
-
-  <div class="field-block">
+  <div class="screen-title"><button class="btn btn-outline btn-sm" onclick="goHome()">← Atrás</button>Crear partida</div>
+  <p style="color:var(--ink-mid); font-size:0.9rem; text-align:center;">Generaremos un panal secreto. Tú decides en qué momento comienza el juego para todos.</p>
+  <div class="field-block" style="margin-top:10px;">
     <div class="field-label">Tu nombre</div>
     <input type="text" id="createName" placeholder="Escribe tu nombre" maxlength="20">
   </div>
-
-  <div class="btn-row">
-    <button class="btn btn-outline" onclick="regeneratePuzzle()">🎲 Otro</button>
-    <button class="btn btn-primary" style="flex:2;" onclick="startAsHost()">Crear y jugar →</button>
-  </div>
+  <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="startAsHost()">Crear Sala de Espera →</button>
 </div>
 
 <div id="screenJoin" class="screen">
-  <div class="screen-title">
-    <button class="btn btn-outline btn-sm" onclick="goHome()">← Atrás</button>
-    Unirse a partida
-  </div>
-
+  <div class="screen-title"><button class="btn btn-outline btn-sm" onclick="goHome()">← Atrás</button>Unirse a partida</div>
   <div class="field-block">
-    <div class="field-label">Código de partida</div>
-    <input type="text" id="joinCode" placeholder="Ej: ABCDEFG_A" maxlength="30" oninput="this.value=this.value.toUpperCase()">
+    <div class="field-label">Código de la sala</div>
+    <input type="text" id="joinCode" placeholder="Ej: X7K9P2" maxlength="6" oninput="this.value=this.value.toUpperCase()">
   </div>
-
   <div class="field-block">
     <div class="field-label">Tu nombre</div>
     <input type="text" id="joinName" placeholder="Escribe tu nombre" maxlength="20">
   </div>
+  <button class="btn btn-primary" style="width:100%;" onclick="joinLobby()">Unirme →</button>
+</div>
 
-  <button class="btn btn-primary" style="width:100%;" onclick="joinGame()">Unirme →</button>
+<div id="screenLobby" class="screen">
+  <div class="screen-title">Sala de Espera</div>
+  <p style="text-align:center;color:var(--ink-mid);font-size:0.9rem;width:100%;">Comparte este código para que otros se unan:</p>
+  <div class="code-display" id="lobbyCode">------</div>
+  
+  <div class="field-block">
+    <div class="field-label">Jugadores listos</div>
+    <div class="player-list" id="lobbyPlayers">
+      </div>
+  </div>
+
+  <div id="hostControls" style="display:none; width:100%;">
+    <button class="btn btn-primary" style="width:100%;" onclick="triggerStartGame()">¡Iniciar Juego Ahora!</button>
+  </div>
+
+  <div id="guestControls" style="display:none; width:100%; text-align:center;">
+    <div class="dots" style="margin-bottom:8px;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <p style="color:var(--ink-mid);font-size:0.9rem;">Esperando a que el anfitrión inicie la partida...</p>
+  </div>
 </div>
 
 <div id="screenGame" class="screen" style="padding:0;max-width:500px;">
 <div class="screen-inner">
-
   <div class="tabs">
     <button class="tab-btn active" id="tabGame"  onclick="switchTab('Game')">🍯 Juego</button>
     <button class="tab-btn"        id="tabBoard" onclick="switchTab('Board')">🏆 Tabla</button>
   </div>
 
   <div class="tab-panel active" id="panelGame">
-
     <div class="score-bar">
       <div>
-        <div class="score-main">
-          <span class="score-num" id="myScore">0</span>
-          <span class="score-pts">puntos</span>
-        </div>
+        <div class="score-main"><span class="score-num" id="myScore">0</span><span class="score-pts">puntos</span></div>
         <div class="rank-txt" id="myRank">Principiante</div>
       </div>
       <div class="score-right">
@@ -444,31 +325,19 @@ input[type="text"]:focus { border-color: var(--ink); }
         <div class="wc-lbl">palabras</div>
       </div>
     </div>
-
-    <div class="word-display" id="wordDisplay">
-      <span id="wordText"></span><span class="word-cursor"></span>
-    </div>
-
-    <div class="hive-container">
-      <svg id="hiveSvg" xmlns="http://www.w3.org/2000/svg"></svg>
-    </div>
-
+    <div class="word-display" id="wordDisplay"><span id="wordText"></span><span class="word-cursor"></span></div>
+    
+    <div class="hive-container"><svg id="hiveSvg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    
     <div class="action-row">
       <button class="btn btn-outline btn-sm" onclick="deleteLetter()">⌫ Borrar</button>
       <button class="btn btn-outline btn-sm" onclick="shuffleOuter()">🔀 Mezclar</button>
       <button class="btn btn-outline btn-sm" onclick="submitWord()">Enviar ↵</button>
     </div>
-
     <div class="found-section">
-      <div class="found-header">
-        <span class="found-header-lbl">Mis palabras</span>
-        <span class="found-count-lbl" id="foundCountLabel">0 palabras</span>
-      </div>
-      <div class="found-list" id="foundList">
-        <span class="found-empty">Aún no has encontrado ninguna palabra…</span>
-      </div>
+      <div class="found-header"><span class="found-header-lbl">Mis palabras</span><span class="found-count-lbl" id="foundCountLabel">0 palabras</span></div>
+      <div class="found-list" id="foundList"><span class="found-empty">Aún no has encontrado ninguna palabra…</span></div>
     </div>
-
     <div class="share-section">
       <div class="field-label">Invita a tus amigos</div>
       <div class="share-row">
@@ -476,18 +345,19 @@ input[type="text"]:focus { border-color: var(--ink); }
         <button class="btn btn-outline btn-sm" onclick="copyLink()">Copiar</button>
       </div>
     </div>
+  </div>
 
-  </div><div class="tab-panel" id="panelBoard">
+  <div class="tab-panel" id="panelBoard">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <div class="field-label" style="margin:0;">Clasificación en vivo</div>
       <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
     </div>
-    <div class="lb-list" id="leaderboard">
-      <div class="lb-empty">Esperando jugadores…</div>
-    </div>
+    <div class="lb-list" id="leaderboard"><div class="lb-empty">Esperando jugadores…</div></div>
   </div>
+</div>
+</div>
 
-</div></div><script>
+<script>
 /* ══════════════════════════════════════════════
    FIREBASE
 ══════════════════════════════════════════════ */
@@ -506,22 +376,26 @@ const db = firebase.database();
 /* ══════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════ */
-let allWords      = [];
-let puzzleLetters = [];
-let centerLetter  = '';
-let outerLetters  = [];
-let validAnswers  = new Set();
-let currentWord   = '';
-let foundWords    = new Set();
-let myScore       = 0;
-let myName        = '';
-let sessionId     = '';
-let dbRef         = null;
-let myPlayerId    = null;
-let wordsLoaded   = false;
+let allWords       = [];
+let puzzleLetters  = [];
+let centerLetter   = '';
+let outerLetters   = [];
+let validAnswers   = new Set();
+let currentWord    = '';
+let foundWords     = new Set();
+let myScore        = 0;
+
+let myName         = '';
+let sessionId      = '';
+let dbRef          = null;
+let myPlayerId     = null;
+let hostId         = null;
+let wordsLoaded    = false;
+let gameData       = null;
+let countdownFired = false;
 
 /* ══════════════════════════════════════════════
-   WORD LOADING
+   WORD LOADING & GENERATION
 ══════════════════════════════════════════════ */
 async function loadWords() {
   document.getElementById('loadingWords').style.display = 'block';
@@ -535,9 +409,6 @@ async function loadWords() {
   document.getElementById('loadingWords').style.display = 'none';
 }
 
-/* ══════════════════════════════════════════════
-   PUZZLE GENERATION
-══════════════════════════════════════════════ */
 function generatePuzzle() {
   const pangrams = allWords.filter(w => new Set(w).size === 7);
   for (let attempt = 0; attempt < 300; attempt++) {
@@ -550,40 +421,19 @@ function generatePuzzle() {
         return s.has(center) && [...s].every(c => letterSet.has(c));
       });
       if (answers.length >= 20 && answers.length <= 700) {
-        return { letters, center, answers };
+        return { letters, center }; // We don't save the massive answers array to DB to save space
       }
     }
   }
   return null;
 }
 
-function applyPuzzle(data) {
-  puzzleLetters = data.letters;
-  centerLetter  = data.center;
-  outerLetters  = data.letters.filter(l => l !== data.center);
-  validAnswers  = new Set(data.answers);
-}
-
-function regeneratePuzzle() {
-  if (!wordsLoaded) { showToast('Cargando diccionario…', ''); return; }
-  const p = generatePuzzle();
-  if (!p) { showToast('No se pudo generar un panal', 'error'); return; }
-  applyPuzzle(p);
-  renderPreview();
-}
-
-function renderPreview() {
-  const c = document.getElementById('previewLetters');
-  c.innerHTML = '';
-  for (const l of puzzleLetters) {
-    const chip = document.createElement('div');
-    chip.className = 'letter-chip' + (l === centerLetter ? ' is-center' : '');
-    chip.textContent = l.toUpperCase();
-    c.appendChild(chip);
-  }
-  document.getElementById('previewCount').textContent = validAnswers.size;
-  const pg = [...validAnswers].find(w => new Set(w).size === 7);
-  document.getElementById('previewPangram').textContent = pg ? pg.toUpperCase() : '–';
+// Generates random 6 character alphanumeric code
+function generateRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+  return result;
 }
 
 /* ══════════════════════════════════════════════
@@ -595,10 +445,9 @@ function showScreen(id) {
 }
 function goHome() { showScreen('screenHome'); }
 
-function showCreatePuzzle() {
+function showCreateScreen() {
   showScreen('screenCreate');
-  if (!wordsLoaded) loadWords().then(() => regeneratePuzzle());
-  else regeneratePuzzle();
+  if (!wordsLoaded) loadWords();
 }
 
 function showJoinScreen() {
@@ -606,74 +455,154 @@ function showJoinScreen() {
   const code = params.get('game');
   if (code) document.getElementById('joinCode').value = code.toUpperCase();
   showScreen('screenJoin');
+  if (!wordsLoaded) loadWords();
 }
 
 /* ══════════════════════════════════════════════
-   HOST / JOIN
+   HOST / JOIN LOBBY
 ══════════════════════════════════════════════ */
 async function startAsHost() {
   const name = document.getElementById('createName').value.trim();
-  if (!name)               { showToast('Escribe tu nombre', 'error'); return; }
-  if (!puzzleLetters.length){ showToast('Genera un panal primero', 'error'); return; }
-  myName    = name;
-  sessionId = puzzleLetters.join('') + '_' + centerLetter;
-  await initFirebase();
-  startGame();
+  if (!name) { showToast('Escribe tu nombre', 'error'); return; }
+  if (!wordsLoaded) { showToast('Cargando diccionario...', ''); return; }
+
+  const puzzle = generatePuzzle();
+  if (!puzzle) { showToast('Error generando panal', 'error'); return; }
+
+  myName     = name;
+  sessionId  = generateRoomCode();
+  myPlayerId = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  hostId     = myPlayerId;
+
+  dbRef = db.ref('games/' + sessionId);
+  await dbRef.set({
+    status: 'lobby',
+    host: myPlayerId,
+    puzzle: puzzle,
+    players: { [myPlayerId]: { name: myName, score: 0, words: 0 } }
+  });
+  
+  dbRef.child('players/' + myPlayerId).onDisconnect().remove();
+  
+  setupGameListener();
+  enterLobbyUI(true);
 }
 
-async function joinGame() {
-  const rawCode = document.getElementById('joinCode').value.trim().toLowerCase();
-  const name    = document.getElementById('joinName').value.trim();
-  if (!rawCode) { showToast('Escribe el código', 'error'); return; }
-  if (!name)    { showToast('Escribe tu nombre', 'error'); return; }
+async function joinLobby() {
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  const name = document.getElementById('joinName').value.trim();
+  if (code.length !== 6) { showToast('El código debe tener 6 letras/números', 'error'); return; }
+  if (!name) { showToast('Escribe tu nombre', 'error'); return; }
+  if (!wordsLoaded) { showToast('Cargando diccionario...', ''); await loadWords(); }
 
-  const parts = rawCode.split('_');
-  if (parts.length !== 2 || parts[0].length !== 7 || parts[1].length !== 1) {
-    showToast('Código inválido', 'error'); return;
-  }
-  const letters = [...new Set(parts[0])].sort();
-  const center  = parts[1];
-  if (!letters.includes(center)) { showToast('Código inválido', 'error'); return; }
+  const snapshot = await db.ref('games/' + code).once('value');
+  const data = snapshot.val();
+  
+  if (!data) { showToast('Sala no encontrada', 'error'); return; }
+  if (data.status !== 'lobby') { showToast('Esta partida ya comenzó', 'error'); return; }
 
-  if (!wordsLoaded) { showToast('Cargando diccionario…', ''); await loadWords(); }
+  myName     = name;
+  sessionId  = code;
+  myPlayerId = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  
+  await db.ref('games/' + sessionId + '/players/' + myPlayerId).set({ name: myName, score: 0, words: 0 });
+  db.ref('games/' + sessionId + '/players/' + myPlayerId).onDisconnect().remove();
 
+  setupGameListener();
+  enterLobbyUI(false);
+}
+
+function enterLobbyUI(isHost) {
+  document.getElementById('lobbyCode').textContent = sessionId;
+  document.getElementById('hostControls').style.display = isHost ? 'block' : 'none';
+  document.getElementById('guestControls').style.display = isHost ? 'none' : 'block';
+  showScreen('screenLobby');
+}
+
+/* ══════════════════════════════════════════════
+   GAME SYNC & COUNTDOWN FLOW
+══════════════════════════════════════════════ */
+function setupGameListener() {
+  db.ref('games/' + sessionId).on('value', snap => {
+    const data = snap.val();
+    if (!data) return; 
+    gameData = data;
+    hostId   = data.host;
+    
+    // 1. Update Lobby list & Leaderboard
+    if (data.players) {
+      renderLobbyPlayers(data.players);
+      renderLeaderboard(data.players);
+    }
+
+    // 2. Watch for Countdown Trigger
+    if (data.status === 'countdown' && !countdownFired) {
+      runCountdownAndStart();
+    }
+  });
+}
+
+function renderLobbyPlayers(playersObj) {
+  const list = document.getElementById('lobbyPlayers');
+  list.innerHTML = '';
+  Object.entries(playersObj).forEach(([id, p]) => {
+    const item = document.createElement('div');
+    item.className = 'player-item';
+    item.innerHTML = `<span>${esc(p.name)}</span> ${id === hostId ? '<span class="host-badge">Anfitrión</span>' : ''}`;
+    list.appendChild(item);
+  });
+}
+
+// Triggered ONLY by the Host clicking the button
+function triggerStartGame() {
+  if (!dbRef) return;
+  dbRef.update({ status: 'countdown' });
+}
+
+// Triggered for ALL players when Firebase status changes to 'countdown'
+function runCountdownAndStart() {
+  countdownFired = true;
+  const overlay = document.getElementById('countdownOverlay');
+  const numDisplay = document.getElementById('countdownNumber');
+  overlay.classList.add('active');
+
+  let count = 3;
+  numDisplay.textContent = count;
+
+  const interval = setInterval(() => {
+    count--;
+    if (count > 0) {
+      numDisplay.textContent = count;
+    } else {
+      clearInterval(interval);
+      overlay.classList.remove('active');
+      initializeLocalGame();
+    }
+  }, 1000);
+}
+
+// Boots the actual UI once countdown finishes
+function initializeLocalGame() {
+  const { letters, center } = gameData.puzzle;
   const letterSet = new Set(letters);
+  
+  // Re-derive valid answers locally since we only saved letters to DB
   const answers = allWords.filter(w => {
     const s = new Set(w);
     return s.has(center) && [...s].every(c => letterSet.has(c));
   });
 
-  applyPuzzle({ letters, center, answers });
-  myName    = name;
-  sessionId = rawCode;
-  await initFirebase();
-  startGame();
-}
+  puzzleLetters = letters;
+  centerLetter  = center;
+  outerLetters  = letters.filter(l => l !== center);
+  validAnswers  = new Set(answers);
 
-/* ══════════════════════════════════════════════
-   FIREBASE SYNC
-══════════════════════════════════════════════ */
-async function initFirebase() {
-  myPlayerId = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
-  dbRef = db.ref('games/' + sessionId + '/players/' + myPlayerId);
-  await dbRef.set({ name: myName, score: 0, words: 0 });
-  dbRef.onDisconnect().remove();
-  db.ref('games/' + sessionId + '/players').on('value', snap => {
-    renderLeaderboard(snap.val() || {});
-  });
-}
-
-function pushScore() {
-  if (dbRef) dbRef.update({ score: myScore, words: foundWords.size });
-}
-
-/* ══════════════════════════════════════════════
-   START GAME
-══════════════════════════════════════════════ */
-function startGame() {
   currentWord = ''; foundWords = new Set(); myScore = 0;
-  const url = location.origin + location.pathname + '?game=' + encodeURIComponent(sessionId.toUpperCase());
+  
+  // Set share URL for mid-game sharing
+  const url = location.origin + location.pathname + '?game=' + encodeURIComponent(sessionId);
   document.getElementById('shareUrl').value = url;
+  
   showScreen('screenGame');
   renderHive();
   updateScoreDisplay();
@@ -682,27 +611,29 @@ function startGame() {
   document.addEventListener('keydown', handleKey);
 }
 
+function pushScore() {
+  db.ref('games/' + sessionId + '/players/' + myPlayerId).update({ 
+    score: myScore, 
+    words: foundWords.size 
+  });
+}
+
 /* ══════════════════════════════════════════════
    HONEYCOMB — Adjusted Math & Alignment
 ══════════════════════════════════════════════ */
-
-const S   = 46;                // hex radius center-to-vertex
-const GAP = 3;                 // visual padding to shrink polygon
-const W   = S * Math.sqrt(3);  // flat-to-flat width
-const H   = S * 2;             // vertex-to-vertex height
-const COL = W;                 // horizontal step
-const ROW = H * 0.75;          // vertical step
+const S   = 46;
+const GAP = 3;
+const W   = S * Math.sqrt(3);
+const H   = S * 2;
+const COL = W;
+const ROW = H * 0.75;
 
 function hexPositions() {
   const cx = 160, cy = 150;
   return [
-    { x: cx - COL/2,       y: cy - ROW },       // 0: Top Left
-    { x: cx + COL/2,       y: cy - ROW },       // 1: Top Right
-    { x: cx - COL,         y: cy       },       // 2: Mid Left
-    { x: cx,               y: cy       },       // 3: CENTER
-    { x: cx + COL,         y: cy       },       // 4: Mid Right
-    { x: cx - COL/2,       y: cy + ROW },       // 5: Bot Left
-    { x: cx + COL/2,       y: cy + ROW },       // 6: Bot Right
+    { x: cx - COL/2, y: cy - ROW }, { x: cx + COL/2, y: cy - ROW },
+    { x: cx - COL,   y: cy       }, { x: cx,         y: cy       }, { x: cx + COL,   y: cy       },
+    { x: cx - COL/2, y: cy + ROW }, { x: cx + COL/2, y: cy + ROW },
   ];
 }
 
@@ -716,23 +647,16 @@ function hexPoints(cx, cy, r) {
 function renderHive() {
   const svg = document.getElementById('hiveSvg');
   svg.innerHTML = '';
-
   const positions = hexPositions();
-  const letters = [
-    outerLetters[0], outerLetters[1],
-    outerLetters[2], centerLetter, outerLetters[3],
-    outerLetters[4], outerLetters[5]
-  ];
-
+  const letters = [outerLetters[0], outerLetters[1], outerLetters[2], centerLetter, outerLetters[3], outerLetters[4], outerLetters[5]];
   const svgW = 320, svgH = 300;
   svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
   svg.setAttribute('width',  svgW);
   svg.setAttribute('height', svgH);
 
   positions.forEach((pos, i) => {
-    const letter   = letters[i];
+    const letter = letters[i];
     const isCenter = letter === centerLetter;
-
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.classList.add('hex-cell');
     g.setAttribute('role', 'button');
@@ -740,16 +664,13 @@ function renderHive() {
     g.addEventListener('click', () => typeLetter(letter));
 
     const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    // We pass S-GAP to draw them slightly smaller, leaving perfect negative space
     poly.setAttribute('points', hexPoints(pos.x, pos.y, S - GAP));
-    poly.setAttribute('fill',   isCenter ? 'var(--yellow)' : 'var(--grey-hex)');
-    // Removed borders entirely for the clean look
+    poly.setAttribute('fill', isCenter ? 'var(--yellow)' : 'var(--grey-hex)');
 
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     text.classList.add('hex-letter');
     text.setAttribute('x', pos.x);
     text.setAttribute('y', pos.y);
-    // Setting dy to 0.35em perfectly centers standard text vertically in SVG
     text.setAttribute('dy', '0.35em'); 
     text.setAttribute('fill', '#111111');
     text.textContent = letter.toUpperCase();
@@ -761,16 +682,10 @@ function renderHive() {
 }
 
 /* ══════════════════════════════════════════════
-   INPUT
+   INPUT & GAME LOGIC
 ══════════════════════════════════════════════ */
-function typeLetter(l) {
-  currentWord += l;
-  document.getElementById('wordText').textContent = currentWord.toUpperCase();
-}
-function deleteLetter() {
-  currentWord = currentWord.slice(0,-1);
-  document.getElementById('wordText').textContent = currentWord.toUpperCase();
-}
+function typeLetter(l) { currentWord += l; document.getElementById('wordText').textContent = currentWord.toUpperCase(); }
+function deleteLetter() { currentWord = currentWord.slice(0,-1); document.getElementById('wordText').textContent = currentWord.toUpperCase(); }
 function shuffleOuter() {
   for (let i = outerLetters.length-1; i > 0; i--) {
     const j = Math.floor(Math.random()*(i+1));
@@ -788,9 +703,6 @@ function handleKey(e) {
   }
 }
 
-/* ══════════════════════════════════════════════
-   SUBMIT
-══════════════════════════════════════════════ */
 function submitWord() {
   const word = currentWord.toLowerCase();
   currentWord = '';
@@ -807,17 +719,14 @@ function submitWord() {
   myScore += pts;
 
   flashWord(word.toUpperCase(), 'bounce');
-  showToast(isPangram ? `🌟 ¡PANGRAMA! +${pts}` : (pts===1?'¡Bien! +1':`¡Genial! +${pts}`),
-            isPangram ? 'pangram' : 'success');
+  showToast(isPangram ? `🌟 ¡PANGRAMA! +${pts}` : (pts===1?'¡Bien! +1':`¡Genial! +${pts}`), isPangram ? 'pangram' : 'success');
+  
   updateScoreDisplay();
   renderFoundWords();
   pushScore();
 }
 
-function calcPoints(w) {
-  if (w.length===4) return 1;
-  return new Set(w).size===7 ? w.length+7 : w.length;
-}
+function calcPoints(w) { return w.length===4 ? 1 : (new Set(w).size===7 ? w.length+7 : w.length); }
 
 function flashWord(text, cls) {
   const el = document.getElementById('wordDisplay');
@@ -827,27 +736,19 @@ function flashWord(text, cls) {
   setTimeout(() => { el.classList.remove(cls); wt.textContent = currentWord.toUpperCase(); }, 600);
 }
 
-/* ══════════════════════════════════════════════
-   SCORE
-══════════════════════════════════════════════ */
 const RANKS = [[0,'Principiante'],[5,'Aprendiz'],[15,'Bueno'],[30,'Hábil'],[60,'Brillante'],[100,'¡Experto!'],[150,'🌟 Maestro']];
-
 function updateScoreDisplay() {
   document.getElementById('myScore').textContent     = myScore;
   document.getElementById('myWordCount').textContent = foundWords.size;
   let rank = RANKS[0][1];
   for (const [t,l] of RANKS) if (myScore>=t) rank=l;
   document.getElementById('myRank').textContent = rank;
-  document.getElementById('foundCountLabel').textContent =
-    foundWords.size===1 ? '1 palabra' : `${foundWords.size} palabras`;
+  document.getElementById('foundCountLabel').textContent = foundWords.size===1 ? '1 palabra' : `${foundWords.size} palabras`;
 }
 
 function renderFoundWords() {
   const list = document.getElementById('foundList');
-  if (!foundWords.size) {
-    list.innerHTML = '<span class="found-empty">Aún no has encontrado ninguna palabra…</span>';
-    return;
-  }
+  if (!foundWords.size) { list.innerHTML = '<span class="found-empty">Aún no has encontrado ninguna palabra…</span>'; return; }
   list.innerHTML = '';
   for (const w of [...foundWords].sort()) {
     const chip = document.createElement('span');
@@ -857,17 +758,12 @@ function renderFoundWords() {
   }
 }
 
-/* ══════════════════════════════════════════════
-   LEADERBOARD
-══════════════════════════════════════════════ */
 function renderLeaderboard(data) {
   const list = document.getElementById('leaderboard');
   const players = Object.entries(data)
     .map(([id,p]) => ({id, name:p.name||'?', score:p.score||0, words:p.words||0}))
     .sort((a,b) => b.score-a.score || b.words-a.words);
-
   if (!players.length) { list.innerHTML='<div class="lb-empty">Esperando jugadores…</div>'; return; }
-
   const medals = ['🥇','🥈','🥉'];
   list.innerHTML = '';
   players.forEach((p,i) => {
@@ -883,20 +779,8 @@ function renderLeaderboard(data) {
 }
 
 const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function switchTab(tab) { ['Game','Board'].forEach(t => { document.getElementById('tab'+t).classList.toggle('active', t===tab); document.getElementById('panel'+t).classList.toggle('active', t===tab); }); }
 
-/* ══════════════════════════════════════════════
-   TABS
-══════════════════════════════════════════════ */
-function switchTab(tab) {
-  ['Game','Board'].forEach(t => {
-    document.getElementById('tab'+t).classList.toggle('active', t===tab);
-    document.getElementById('panel'+t).classList.toggle('active', t===tab);
-  });
-}
-
-/* ══════════════════════════════════════════════
-   UTILS
-══════════════════════════════════════════════ */
 let toastTimer;
 function showToast(msg, type='') {
   const el = document.getElementById('toast');
@@ -907,8 +791,7 @@ function showToast(msg, type='') {
 }
 
 function copyLink() {
-  navigator.clipboard.writeText(document.getElementById('shareUrl').value)
-    .then(() => showToast('¡Enlace copiado!','success'));
+  navigator.clipboard.writeText(document.getElementById('shareUrl').value).then(() => showToast('¡Enlace copiado!','success'));
 }
 
 /* ══════════════════════════════════════════════
@@ -927,3 +810,5 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
+```
